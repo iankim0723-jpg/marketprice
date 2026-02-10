@@ -15,10 +15,33 @@ st.markdown("""
     .stTabs [aria-selected="true"] { background-color: #D4AF37 !important; color: black !important; font-weight: bold; }
     input { background-color: #262626 !important; color: #FFFFFF !important; border: 1px solid #D4AF37 !important; }
     .streamlit-expanderHeader { background-color: #222 !important; color: #aaa !important; font-size: 0.9rem !important; }
+    
+    /* 필독 공지 스타일 */
+    .notice-box {
+        background-color: #3d0c0c; 
+        border: 2px solid #FF4B4B; 
+        border-radius: 10px; 
+        padding: 15px; 
+        text-align: center; 
+        margin-bottom: 20px;
+        color: #FF4B4B;
+        font-weight: bold;
+        font-size: 1.1rem;
+    }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("WOORI PRICE MASTER")
+
+# ==========================================
+# [★신규 추가★] 상단 필독 공지
+# ==========================================
+st.markdown("""
+    <div class="notice-box">
+        📢 [필독] 견적 산출 시, 화면 최하단의 '공통 기준 및 별도 옵션표'를 반드시 확인해 주세요!
+    </div>
+    """, unsafe_allow_html=True)
+
 
 # ==========================================
 # [공통 함수] 표 생성기
@@ -32,13 +55,11 @@ def make_html_table(title, price_dict, thick_list, gap_dict, mat_type="EPS"):
             p_gen = price_dict['gen'] + (i * gap_dict['gen'])
             p_nan = price_dict['nan'] + (i * gap_dict['nan'])
             
-            # 인증은 75T 이상부터 표시 (보통)
+            # 인증은 75T 이상부터 표시
             str_cert = f"{p_cert:,}" if t >= 75 else "-"
-            # 일반 0.35T는 0.5T 대비 -4600원 (가정)
             cols = f"<td>{p_gen-4600:,}</td> <td>{p_gen:,}</td> <td>{p_nan-1400:,}</td> <td>{p_nan:,}</td> <td style='color:#D4AF37; font-weight:bold;'>{str_cert}</td>"
             
         elif mat_type == "GW":
-            # GW: 48K / 64K / 내화
             p_48 = price_dict['48'] + (i * gap_dict['48'])
             p_64 = price_dict['64'] + (i * gap_dict['64'])
             
@@ -49,7 +70,6 @@ def make_html_table(title, price_dict, thick_list, gap_dict, mat_type="EPS"):
             cols = f"<td>{p_48:,}</td> <td>{p_64:,}</td> <td>{f30}</td> <td>{f60_48}</td> <td>{f60_64}</td>"
 
         elif mat_type == "URE":
-            # URE: 일반 / 인증
             p_gen = price_dict['gen'] + (i * gap_dict['gen'])
             p_cert = price_dict['cert'] + (i * gap_dict['cert'])
             cols = f"<td>{p_gen:,}</td> <td>{p_cert:,}</td>"
@@ -88,8 +108,7 @@ with st.sidebar:
         
         st.markdown("---")
         st.subheader("1. 기준 단가 (50T 기준)")
-        # 관리자 입력창 (모두 일반/기본 50T 기준)
-        base_eps_gen = st.number_input("EPS 일반 50T", value=11500, step=100) # 기존 17800(인증) - 6300 = 11500
+        base_eps_gen = st.number_input("EPS 일반 50T", value=11500, step=100)
         base_gw_wall = st.number_input("GW 벽체 50T (48K)", value=13800, step=100)
         base_ure_wall = st.number_input("URE 벽체 50T", value=24500, step=100)
         
@@ -123,11 +142,10 @@ with st.sidebar:
 # ==========================================
 
 # 1. EPS 계산 (일반 50T 기준)
-# 난연 = 일반 + 1400 / 인증 = 일반 + 6300 (가정)
 base_eps_nan = base_eps_gen + 1400
 base_eps_cert = base_eps_gen + 6300
 
-# 품목별 추가금 (벽체 대비)
+# 품목별 추가금
 d_eps = {'ext': 2400, 'roof': 2900, 'zinc': 4500, 'line': 14700, 'jung': 24300}
 gaps_eps = {'gen': gap_eps_gen, 'nan': gap_eps_nan, 'cert': gap_eps_cert}
 thicks_eps = [50, 75, 100, 125, 150, 155, 175, 200, 225, 250, 260]
@@ -196,53 +214,3 @@ if st.sidebar.button("카톡용 텍스트 복사"):
 
 footer_html = """
 <style>
-    .footer-container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; font-family: sans-serif; color: white; }
-    .box { flex: 1; min-width: 350px; border: 1px solid #444; padding: 10px; background-color: #111; }
-    .box h4 { color: #D4AF37; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 5px; }
-    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; }
-    th { background-color: #333; color: #D4AF37; border: 1px solid #555; padding: 6px; }
-    td { background-color: #1A1A1A; border: 1px solid #444; padding: 6px; }
-    .plus { color: #FF6B6B; font-weight: bold; }
-    .minus { color: #4dabf7; font-weight: bold; }
-</style>
-
-<div class="footer-container">
-    <div class="box">
-        <h4>1. 공통사항 및 내화인증</h4>
-        <table>
-            <tr><th colspan="2">기본 공통</th></tr>
-            <tr><td>보호필름</td><td class="plus">+300원</td></tr>
-            <tr><td>특이색상(오렌지/검정/노랑)</td><td class="plus">+500원</td></tr>
-            <tr><td>캐노피/행가 (50T)</td><td>20,500원</td></tr>
-            <tr><td>캐노피/행가 (75T)</td><td>21,900원</td></tr>
-        </table>
-        <br>
-        <table>
-            <tr><th colspan="5">내화인증 기준 (그라스울)</th></tr>
-            <tr><th>타입</th><th>두께</th><th>밀도</th><th>성능</th><th>비고</th></tr>
-            <tr><td>벽체</td><td>125T~</td><td>48K</td><td>1시간</td><td>무하지</td></tr>
-            <tr><td>외벽</td><td>100T~</td><td>48K</td><td>0.5시간</td><td>하지1700↓</td></tr>
-            <tr><td>지붕</td><td>184T~</td><td>48K</td><td>0.5시간</td><td>하지1200↓</td></tr>
-            <tr><td>징크</td><td>125T~</td><td>64K</td><td>1시간</td><td>하지1700↓</td></tr>
-        </table>
-    </div>
-
-    <div class="box">
-        <h4>2. 품목별 별도 옵션</h4>
-        <table>
-            <tr><th>구분</th><th>항목</th><th>금액</th></tr>
-            <tr><td>벽체</td><td>일면 유색</td><td class="plus">+500원</td></tr>
-            <tr><td rowspan="4">외벽체/지붕</td><td>유니스톤</td><td class="plus">+1,000원</td></tr>
-            <tr><td>리얼/코르텐/징크</td><td class="plus">+2,000원</td></tr>
-            <tr><td>0.6T 변경</td><td class="plus">+1,700원</td></tr>
-            <tr><td>0.8T 변경</td><td class="plus">+4,700원</td></tr>
-            <tr><td rowspan="2">징크</td><td>유니스톤</td><td class="minus">-500원 (공제)</td></tr>
-            <tr><td>일면 유색</td><td class="minus">-1,000원 (공제)</td></tr>
-            <tr><td rowspan="2">라인메탈</td><td>메지 간격</td><td>1000 고정</td></tr>
-            <tr><td>0.8T 변경</td><td class="plus">+3,400원</td></tr>
-            <tr><td>정메탈</td><td>측면/두걱 가공</td><td style="color:#D4AF37;">별도 견적</td></tr>
-        </table>
-    </div>
-</div>
-"""
-components.html(footer_html, height=800, scrolling=True)
