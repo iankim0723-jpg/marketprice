@@ -1,93 +1,89 @@
 import streamlit as st
-import pandas as pd
 
-# 페이지 설정
-st.set_page_config(page_title="WOORI COST & PRICE MASTER", layout="centered")
+# 1. 페이지 기본 설정 및 다크모드 가독성 강제 고정
+st.set_page_config(page_title="WOORI COST SOLVER", layout="centered")
 
-# 다크 모드 & 고대비 CSS (가독성 최적화)
 st.markdown("""
     <style>
     .stApp { background-color: #000000; color: #FFFFFF; }
-    span, p, label, div { color: #FFFFFF !important; }
-    h1, h2, h3 { color: #D4AF37 !important; text-align: center; }
+    h1, h2, h3 { color: #D4AF37 !important; text-align: center; font-weight: bold; }
+    label, p, span { color: #FFFFFF !important; font-weight: bold; }
+    /* 입력창 글자색 검정 방지 */
     input { background-color: #262626 !important; color: #FFFFFF !important; border: 1px solid #D4AF37 !important; }
-    div[data-baseweb="select"] > div { background-color: #262626 !important; color: #FFFFFF !important; border: 1px solid #D4AF37 !important; }
-    /* 드롭다운 리스트 가독성 강제 고정 */
-    ul[role="listbox"] { background-color: #262626 !important; }
-    li[role="option"] { color: #FFFFFF !important; background-color: #262626 !important; }
-    li[role="option"]:hover { background-color: #D4AF37 !important; color: #000000 !important; }
-    .stButton>button { width: 100%; background-color: #D4AF37 !important; color: #000000 !important; font-weight: bold !important; border-radius: 10px; height: 3.5em; border: none; }
-    .metric-container { background-color: #1A1A1A; padding: 20px; border-radius: 15px; border: 1px solid #333; margin-bottom: 10px; }
-    div[data-testid="stMetricValue"] { color: #D4AF37 !important; font-size: 2.2rem !important; font-weight: bold; }
+    /* 선택박스 배경 및 글자색 강제 고정 */
+    div[data-baseweb="select"] > div { background-color: #262626 !important; color: #FFFFFF !important; }
+    div[role="listbox"] { background-color: #262626 !important; color: #FFFFFF !important; }
+    /* 버튼: 금색 배경 / 검정 글자 */
+    .stButton>button { 
+        width: 100%; background-color: #D4AF37 !important; color: #000000 !important; 
+        font-weight: bold !important; border-radius: 12px; height: 3.5em; border: none;
+    }
+    /* 결과값 숫자 강조 */
+    div[data-testid="stMetricValue"] { color: #D4AF37 !important; font-size: 3rem !important; font-weight: bold; text-align: center; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("WOORI COST & PRICE MASTER")
+st.title("WOORI COST SOLVER")
 
-# --- 1. 코일 및 기본 단가 입력 (상단 고정) ---
-with st.expander("⚙️ 기본 매입 단가 설정", expanded=False):
-    col_c1, col_c2 = st.columns(2)
-    with col_c1:
-        ext_coil_p = st.number_input("외부 코일 단가 (kg)", value=1100)
-        int_coil_p = st.number_input("내부 코일 단가 (kg)", value=1100)
-    with col_c2:
-        process_f = st.number_input("가공비 (인건비+소모품)", value=2700)
-        gw_48_p = st.number_input("GW 48k 매입가 (kg)", value=1770)
-        gw_64_p = st.number_input("GW 64k 매입가 (kg)", value=1600)
+# --- 입력 섹션 ---
+st.subheader("1. 원자재 매입가 설정")
+col1, col2 = st.columns(2)
+with col1:
+    ext_coil_p = st.number_input("외부 코일 (kg당/원)", value=1100)
+    int_coil_p = st.number_input("내부 코일 (kg당/원)", value=1100)
+with col2:
+    gw_48k_p = st.number_input("그라스울 48k (kg당/원)", value=1770)
+    gw_64k_p = st.number_input("그라스울 64k (kg당/원)", value=1600)
 
 st.write("---")
 
-# --- 2. 사양 선택 (홀덤 솔버 스타일) ---
-col1, col2 = st.columns(2)
-with col1:
-    panel_type = st.selectbox("판넬 구분", ["벽체(일반)", "지붕(3골)", "지붕(4골)", "메탈/라인메탈"])
-    core_type = st.radio("심재", ["EPS", "GW(48k)", "GW(64k)", "우레탄"])
-with col2:
-    thickness = st.number_input("두께 (T) 입력", value=150, step=5)
-    coil_opt = st.selectbox("코일 조합", ["외부(1219)+내부(1040)", "내부(1040)+내부(1040)"])
+st.subheader("2. 제품 사양 선택")
+# 심재 선택
+material = st.selectbox("심재 종류", ["EPS", "그라스울(48k)", "그라스울(64k)", "우레탄"])
 
-# --- 3. 계산 로직 (제조 원가) ---
-# 코일비 (중량 상수: 1219폭 4.784 / 1040폭 4.082)
+col3, col4 = st.columns(2)
+with col3:
+    # 대표님 데이터: EPS 50T 보드값 3,650원 기준
+    default_m_p = 3650 if material == "EPS" else 18000 # 우레탄은 임시값
+    # 그라스울은 kg당 단가를 사용하므로 보드값 입력창 비활성화 처리 가능
+    m_label = "보드값/원액비 (m당)" if material != "그라스울(48k)" and material != "그라스울(64k)" else "심재 단가는 상단 매입가 적용됨"
+    m_price = st.number_input(m_label, value=default_m_p if "그라스울" not in material else 0)
+with col4:
+    thickness = st.number_input("제품 두께 (T)", value=150)
+
+coil_opt = st.radio("코일 조합", ["외부(1219) + 내부(1040)", "내부(1040) + 내부(1040)"], horizontal=True)
+
+# 고정비: 인건비 2,000원 + 소모품 700원 = 2,700원
+process_fee = 2700
+
+# --- 계산 엔진 ---
+# 1. 코일비 (중량: 1219폭 4.784kg / 1040폭 4.082kg)
 if "외부" in coil_opt:
     cost_coil = (4.784 * ext_coil_p) + (4.082 * int_coil_p)
 else:
     cost_coil = (4.082 * int_coil_p) * 2
 
-# 심재비
-if core_type == "EPS":
-    # 대표님 데이터 기반 50T=3650원 비례
-    cost_core = (thickness / 50) * 3650
-elif "GW" in core_type:
-    density = 48 if "48k" in core_type else 64
-    price_kg = gw_48_p if density == 48 else gw_64_p
-    cost_core = (thickness / 1000) * density * 1.219 * price_kg
-else: # 우레탄 (가정치)
-    cost_core = (thickness / 50) * 18000
+# 2. 심재비
+if material == "EPS":
+    cost_core = (thickness / 50) * m_price
+elif "그라스울" in material:
+    density = 48 if "48k" in material else 64
+    kg_price = gw_48k_p if density == 48 else gw_64k_p
+    # 그라스울 중량 공식: 두께(m) * 밀도 * 폭(1.219)
+    cost_core = (thickness / 1000) * density * 1.219 * kg_price
+else: # 우레탄
+    cost_core = (thickness / 50) * m_price
 
-total_cost = int(cost_coil + cost_core + process_f)
+# 최종 합계
+total_cost = int(cost_coil + cost_core + process_fee)
 
-# --- 4. 결과 출력 (원가 vs 시장가 비교) ---
-st.write("### 📊 산출 결과")
+# --- 결과 섹션 ---
+st.write("---")
+st.write("### 💰 산출된 제조 원가 (1m)")
+st.metric(label="", value=f"{total_cost:,} 원")
 
-res1, res2 = st.columns(2)
-with res1:
-    st.markdown('<div class="metric-container">', unsafe_allow_html=True)
-    st.metric("예상 제조 원가 (1m)", f"{total_cost:,} 원")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-with res2:
-    # 이미지 단가표 기반 샘플 매칭 (나중에 엑셀로 연동 가능)
-    # 예: 지붕 3골 GW 48k 220T = 39,300원
-    market_price = 39300 if "지붕" in panel_type and "48k" in core_type and thickness == 220 else 0
-    st.markdown('<div class="metric-container">', unsafe_allow_html=True)
-    st.metric("단가표 기준가 (1m)", f"{market_price:,} 원" if market_price > 0 else "데이터 없음")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-if market_price > 0:
-    profit = market_price - total_cost
-    st.success(f"💡 예상 마진: {profit:,}원 (마진율 {round(profit/market_price*100, 1)}%)")
-
-# 카톡 공유
-if st.button("📱 결과 복사 (카톡 전송용)"):
-    msg = f"[우리 스틸 테크]\n사양: {panel_type} {core_type} {thickness}T\n조합: {coil_opt}\n원가: {total_cost:,}원\n단가표: {market_price:,}원"
-    st.code(msg)
+# 공유용 텍스트
+if st.button("카톡 공유용 결과 복사"):
+    share_msg = f"[우리 스틸 테크]\n{material} {thickness}T ({coil_opt})\n원가: {total_cost:,}원"
+    st.code(share_msg)
+    st.success("위 코드를 복사해서 카톡에 붙여넣으세요!")
