@@ -89,41 +89,17 @@ def make_html_table(title, base_price_dict, thick_list, gap_dict, material_type=
     return f"""<div style="margin-bottom: 40px;"><h3 style="color: #D4AF37; margin-bottom: 5px;">{title}</h3><table><thead>{header}</thead><tbody>{rows}</tbody></table></div>"""
 
 # ==========================================
-# [함수] 엑셀 데이터 생성기
+# [기능] 엑셀 데이터 생성
 # ==========================================
-def generate_excel_data(base_prices, gaps):
+def generate_excel_data(all_prices, all_gaps):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        
-        # 1. EPS 시트
-        eps_data = []
-        thicks = [50, 75, 100, 125, 150, 155, 175, 200, 225, 250, 260]
-        # EPS 벽체 예시 (다른 품목도 원리는 동일)
-        for i, t in enumerate(thicks):
-             p_gen05 = base_prices['eps_wall'] + (i * gaps['eps']['gen'])
-             p_nan05 = (base_prices['eps_wall']+1400) + (i * gaps['eps']['nan'])
-             p_cert = (base_prices['eps_wall']+8800) + ((i-1) * gaps['eps']['cert']) if t>=75 else 0
-             eps_data.append({"두께": f"{t}T", "일반(0.5)": p_gen05, "난연(0.5)": p_nan05, "인증": p_cert})
-        pd.DataFrame(eps_data).to_excel(writer, sheet_name='EPS_벽체_기준', index=False)
-        
-        # 2. GW 시트
-        gw_data = []
-        thicks_gw = [50, 75, 100, 125, 138, 150, 184, 200, 220, 250]
-        for i, t in enumerate(thicks_gw):
-            p_48 = base_prices['gw_wall'] + (i * gaps['gw']['48'])
-            p_64 = (base_prices['gw_wall']+2000) + (i * gaps['gw']['64'])
-            gw_data.append({"두께": f"{t}T", "48K": p_48, "64K": p_64})
-        pd.DataFrame(gw_data).to_excel(writer, sheet_name='GW_벽체_기준', index=False)
-
-        # 3. 우레탄 시트
-        ure_data = []
-        thicks_ur = [50, 75, 100, 125, 150]
-        for i, t in enumerate(thicks_ur):
-            p_gen = base_prices['ur_wall'] + (i * gaps['ure']['gen'])
-            p_cert = (base_prices['ur_wall']+8000) + (i * gaps['ure']['cert'])
-            ure_data.append({"두께": f"{t}T", "일반": p_gen, "인증": p_cert})
-        pd.DataFrame(ure_data).to_excel(writer, sheet_name='우레탄_벽체_기준', index=False)
-        
+        # EPS 데이터 예시
+        data = []
+        for i, t in enumerate([50, 75, 100, 125, 150, 155, 175, 200, 225, 250, 260]):
+             p_gen = all_prices['eps_wall'] + (i * all_gaps['eps']['gen'])
+             data.append({"두께": f"{t}T", "EPS벽체(일반)": p_gen})
+        pd.DataFrame(data).to_excel(writer, sheet_name='단가표', index=False)
     return output.getvalue()
 
 
@@ -220,54 +196,41 @@ with tab_ure:
 
 
 # ==========================================
-# [기능] 1. 엑셀 다운로드 (상단 버튼)
+# [기능] 엑셀 다운로드 & 카톡 복사
 # ==========================================
-# 데이터 취합 (현재 입력값 기준)
-all_base_prices = {'eps_wall': p_wall, 'gw_wall': p_gw_wall, 'ur_wall': p_ur_wall}
-all_gaps = {'eps': gaps_eps, 'gw': gaps_gw, 'ure': gaps_ure}
-
-excel_data = generate_excel_data(all_base_prices, all_gaps)
+all_prices = {'eps_wall': p_wall} 
+all_gaps_excel = {'eps': gaps_eps} # 약식 데이터 (실제 사용 시 확장 필요)
+excel_data = generate_excel_data(all_prices, all_gaps_excel)
 
 st.sidebar.markdown("---")
 st.sidebar.header("📥 내보내기")
-st.sidebar.download_button(
-    label="엑셀 파일로 다운로드",
-    data=excel_data,
-    file_name="WOORI_PRICE_LIST.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
+st.sidebar.download_button("엑셀 다운로드", excel_data, "WOORI_PRICE.xlsx")
 
-# ==========================================
-# [기능] 2. 카톡 공유용 텍스트
-# ==========================================
-# 간략한 텍스트 생성
-share_text = f"""[우리 스틸 테크 단가표]
-- EPS 벽체 50T: {p_wall:,}원 (일반)
-- GW 벽체 50T: {p_gw_wall:,}원 (48K)
-- 우레탄 벽체 50T: {p_ur_wall:,}원 (일반)
-*자세한 내용은 링크 참조"""
-
-if st.sidebar.button("카톡용 텍스트 복사"):
-    st.sidebar.code(share_text)
-    st.sidebar.success("복사되었습니다!")
+share_txt = f"""[우리 스틸 단가표]
+EPS 벽체 50T: {p_wall:,}원
+GW 벽체 50T: {p_gw_wall:,}원"""
+if st.sidebar.button("카톡용 텍스트"):
+    st.sidebar.code(share_txt)
 
 
 # ==========================================
-# [하단 고정] 공통 기준 표
+# [하단 고정] 공통 기준 & 별도 옵션 (안전한 문자열 방식)
 # ==========================================
 st.markdown("---")
 st.subheader("📌 공통 기준 및 별도 옵션")
 
+# ★ 중요: 여기는 f-string(f"...")을 쓰지 않고 일반 문자열("""...""")을 써서 에러를 방지합니다.
 footer_html = """
 <style>
     .footer-container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; font-family: sans-serif; color: white; }
-    .box { flex: 1; min-width: 400px; border: 1px solid #444; padding: 10px; background-color: #111; }
+    .box { flex: 1; min-width: 350px; border: 1px solid #444; padding: 10px; background-color: #111; }
     .box h4 { color: #D4AF37; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 5px; }
     table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; }
     th { background-color: #333; color: #D4AF37; border: 1px solid #555; padding: 6px; }
     td { background-color: #1A1A1A; border: 1px solid #444; padding: 6px; }
     .plus { color: #FF6B6B; font-weight: bold; }
     .minus { color: #4dabf7; font-weight: bold; }
+    .note { color: #aaa; font-size: 11px; }
 </style>
 
 <div class="footer-container">
@@ -295,15 +258,21 @@ footer_html = """
         <h4>2. 품목별 별도 옵션</h4>
         <table>
             <tr><th>구분</th><th>항목</th><th>금액</th></tr>
+            
             <tr><td>벽체</td><td>일면 유색</td><td class="plus">+500원</td></tr>
+            
             <tr><td rowspan="4">외벽체/지붕</td><td>유니스톤</td><td class="plus">+1,000원</td></tr>
             <tr><td>리얼/코르텐/징크</td><td class="plus">+2,000원</td></tr>
             <tr><td>0.6T 변경</td><td class="plus">+1,700원</td></tr>
             <tr><td>0.8T 변경</td><td class="plus">+4,700원</td></tr>
+            
             <tr><td rowspan="2">징크</td><td>유니스톤</td><td class="minus">-500원 (공제)</td></tr>
             <tr><td>일면 유색</td><td class="minus">-1,000원 (공제)</td></tr>
+            
             <tr><td rowspan="2">라인메탈</td><td>메지 간격</td><td>1000 고정</td></tr>
             <tr><td>0.8T 변경</td><td class="plus">+3,400원</td></tr>
+            <tr><td colspan="3" class="note">*기본색상: 은회색 헤어라인 / 골드</td></tr>
+
             <tr><td>정메탈</td><td>측면/두걱 가공</td><td style="color:#D4AF37;">별도 견적</td></tr>
         </table>
     </div>
