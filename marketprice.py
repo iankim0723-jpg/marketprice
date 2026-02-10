@@ -16,6 +16,8 @@ st.markdown("""
     .stTabs [data-baseweb="tab"] { background-color: #222; border-radius: 5px; color: white; }
     .stTabs [aria-selected="true"] { background-color: #D4AF37 !important; color: black !important; font-weight: bold; }
     input { background-color: #262626 !important; color: #FFFFFF !important; border: 1px solid #D4AF37 !important; }
+    /* Expander 스타일 */
+    .streamlit-expanderHeader { background-color: #222 !important; color: #D4AF37 !important; font-weight: bold !important; border: 1px solid #444; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -94,7 +96,6 @@ def make_html_table(title, base_price_dict, thick_list, gap_dict, material_type=
 def generate_excel_data(all_prices, all_gaps):
     output = io.BytesIO()
     with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-        # EPS 데이터 예시
         data = []
         for i, t in enumerate([50, 75, 100, 125, 150, 155, 175, 200, 225, 250, 260]):
              p_gen = all_prices['eps_wall'] + (i * all_gaps['eps']['gen'])
@@ -121,15 +122,17 @@ style_block = """
 
 # --- EPS 탭 ---
 with tab_eps:
-    st.info("각 품목의 [50T 일반 0.5T 기준가]를 입력하세요.")
-    c1, c2, c3 = st.columns(3)
-    with c1: p_wall = st.number_input("EPS 벽체 50T", value=14000)
-    with c2: p_ext = st.number_input("EPS 외벽체 50T", value=16400)
-    with c3: p_roof = st.number_input("EPS 지붕 50T", value=16900)
-    c4, c5, c6 = st.columns(3)
-    with c4: p_zinc = st.number_input("EPS 징크 50T", value=18500)
-    with c5: p_line = st.number_input("EPS 라인메탈 50T", value=28700)
-    with c6: p_jung = st.number_input("EPS 정메탈 50T", value=38300)
+    # ★ 접기/펼치기 기능 추가됨
+    with st.expander("💰 EPS 기준 단가 설정 (접기/펼치기)", expanded=True):
+        st.info("각 품목의 [50T 일반 0.5T 기준가]를 입력하세요.")
+        c1, c2, c3 = st.columns(3)
+        with c1: p_wall = st.number_input("EPS 벽체 50T", value=14000)
+        with c2: p_ext = st.number_input("EPS 외벽체 50T", value=16400)
+        with c3: p_roof = st.number_input("EPS 지붕 50T", value=16900)
+        c4, c5, c6 = st.columns(3)
+        with c4: p_zinc = st.number_input("EPS 징크 50T", value=18500)
+        with c5: p_line = st.number_input("EPS 라인메탈 50T", value=28700)
+        with c6: p_jung = st.number_input("EPS 정메탈 50T", value=38300)
 
     gaps_eps = {'gen': gap_eps_gen, 'nan': gap_eps_nan, 'cert': gap_eps_cert}
     thicks = [50, 75, 100, 125, 150, 155, 175, 200, 225, 250, 260]
@@ -146,15 +149,16 @@ with tab_eps:
 
 # --- GW 탭 ---
 with tab_gw:
-    st.info("각 품목의 [50T 48K 기준가]를 입력하세요.")
-    c1, c2, c3 = st.columns(3)
-    with c1: p_gw_wall = st.number_input("GW 벽체 50T", value=20400)
-    with c2: p_gw_ext = st.number_input("GW 외벽체 50T", value=22900)
-    with c3: p_gw_roof = st.number_input("GW 지붕 50T", value=22900)
-    c4, c5, c6 = st.columns(3)
-    with c4: p_gw_zinc = st.number_input("GW 징크 50T", value=25300)
-    with c5: p_gw_line = st.number_input("GW 라인메탈 50T", value=26700)
-    with c6: p_gw_jung = st.number_input("GW 정메탈 50T", value=35500)
+    with st.expander("💰 그라스울 기준 단가 설정 (접기/펼치기)", expanded=True):
+        st.info("각 품목의 [50T 48K 기준가]를 입력하세요.")
+        c1, c2, c3 = st.columns(3)
+        with c1: p_gw_wall = st.number_input("GW 벽체 50T", value=20400)
+        with c2: p_gw_ext = st.number_input("GW 외벽체 50T", value=22900)
+        with c3: p_gw_roof = st.number_input("GW 지붕 50T", value=22900)
+        c4, c5, c6 = st.columns(3)
+        with c4: p_gw_zinc = st.number_input("GW 징크 50T", value=25300)
+        with c5: p_gw_line = st.number_input("GW 라인메탈 50T", value=26700)
+        with c6: p_gw_jung = st.number_input("GW 정메탈 50T", value=35500)
 
     gaps_gw = {'48': gap_gw_48, '64': gap_gw_64}
     thicks_gw = [50, 75, 100, 125, 138, 150, 184, 200, 220, 250]
@@ -171,15 +175,16 @@ with tab_gw:
 
 # --- URE 탭 ---
 with tab_ure:
-    st.info("각 품목의 [50T 일반 기준가]를 입력하세요.")
-    c1, c2, c3 = st.columns(3)
-    with c1: p_ur_wall = st.number_input("URE 벽체 50T", value=24500)
-    with c2: p_ur_ext = st.number_input("URE 외벽체 50T", value=25500)
-    with c3: p_ur_roof = st.number_input("URE 지붕 50T", value=26500)
-    c4, c5, c6 = st.columns(3)
-    with c4: p_ur_zinc = st.number_input("URE 징크 50T", value=30500)
-    with c5: p_ur_line = st.number_input("URE 라인메탈 50T", value=35500)
-    with c6: p_ur_jung = st.number_input("URE 정메탈 50T", value=45500)
+    with st.expander("💰 우레탄 기준 단가 설정 (접기/펼치기)", expanded=True):
+        st.info("각 품목의 [50T 일반 기준가]를 입력하세요.")
+        c1, c2, c3 = st.columns(3)
+        with c1: p_ur_wall = st.number_input("URE 벽체 50T", value=24500)
+        with c2: p_ur_ext = st.number_input("URE 외벽체 50T", value=25500)
+        with c3: p_ur_roof = st.number_input("URE 지붕 50T", value=26500)
+        c4, c5, c6 = st.columns(3)
+        with c4: p_ur_zinc = st.number_input("URE 징크 50T", value=30500)
+        with c5: p_ur_line = st.number_input("URE 라인메탈 50T", value=35500)
+        with c6: p_ur_jung = st.number_input("URE 정메탈 50T", value=45500)
 
     gaps_ure = {'gen': gap_ure_gen, 'cert': gap_ure_cert}
     thicks_ur = [50, 75, 100, 125, 150]
@@ -199,7 +204,7 @@ with tab_ure:
 # [기능] 엑셀 다운로드 & 카톡 복사
 # ==========================================
 all_prices = {'eps_wall': p_wall} 
-all_gaps_excel = {'eps': gaps_eps} # 약식 데이터 (실제 사용 시 확장 필요)
+all_gaps_excel = {'eps': gaps_eps} 
 excel_data = generate_excel_data(all_prices, all_gaps_excel)
 
 st.sidebar.markdown("---")
@@ -214,12 +219,11 @@ if st.sidebar.button("카톡용 텍스트"):
 
 
 # ==========================================
-# [하단 고정] 공통 기준 & 별도 옵션 (안전한 문자열 방식)
+# [하단 고정] 공통 기준 & 별도 옵션
 # ==========================================
 st.markdown("---")
 st.subheader("📌 공통 기준 및 별도 옵션")
 
-# ★ 중요: 여기는 f-string(f"...")을 쓰지 않고 일반 문자열("""...""")을 써서 에러를 방지합니다.
 footer_html = """
 <style>
     .footer-container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; font-family: sans-serif; color: white; }
@@ -258,21 +262,15 @@ footer_html = """
         <h4>2. 품목별 별도 옵션</h4>
         <table>
             <tr><th>구분</th><th>항목</th><th>금액</th></tr>
-            
             <tr><td>벽체</td><td>일면 유색</td><td class="plus">+500원</td></tr>
-            
             <tr><td rowspan="4">외벽체/지붕</td><td>유니스톤</td><td class="plus">+1,000원</td></tr>
             <tr><td>리얼/코르텐/징크</td><td class="plus">+2,000원</td></tr>
             <tr><td>0.6T 변경</td><td class="plus">+1,700원</td></tr>
             <tr><td>0.8T 변경</td><td class="plus">+4,700원</td></tr>
-            
             <tr><td rowspan="2">징크</td><td>유니스톤</td><td class="minus">-500원 (공제)</td></tr>
             <tr><td>일면 유색</td><td class="minus">-1,000원 (공제)</td></tr>
-            
             <tr><td rowspan="2">라인메탈</td><td>메지 간격</td><td>1000 고정</td></tr>
             <tr><td>0.8T 변경</td><td class="plus">+3,400원</td></tr>
-            <tr><td colspan="3" class="note">*기본색상: 은회색 헤어라인 / 골드</td></tr>
-
             <tr><td>정메탈</td><td>측면/두걱 가공</td><td style="color:#D4AF37;">별도 견적</td></tr>
         </table>
     </div>
