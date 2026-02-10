@@ -1,11 +1,11 @@
 import streamlit as st
 
-# 1. 페이지 설정 및 다크모드/가독성 CSS
+# 1. 페이지 설정 (제목 수정)
 st.set_page_config(page_title="WOORI PRICE MASTER", layout="wide")
 
 st.markdown("""
     <style>
-    /* 전체 배경 검정 */
+    /* 전체 배경 검정, 글자 흰색 */
     .stApp { background-color: #000000; color: #FFFFFF; }
     
     /* 사이드바 스타일 */
@@ -20,40 +20,40 @@ st.markdown("""
     .stTabs [data-baseweb="tab"] { background-color: #222; color: #FFF; border-radius: 5px; }
     .stTabs [aria-selected="true"] { background-color: #D4AF37 !important; color: #000 !important; font-weight: bold; }
 
-    /* HP 스타일 테이블 디자인 (핵심) */
-    .hp-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; color: #FFFFFF; text-align: center; }
-    .hp-table th { background-color: #D4AF37; color: #000000; border: 1px solid #555; padding: 8px; font-weight: bold; }
-    .hp-table td { background-color: #1A1A1A; border: 1px solid #444; padding: 8px; }
-    .hp-table tr:hover td { background-color: #333; cursor: pointer; }
+    /* 테이블 디자인 (표준 양식) */
+    .woori-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; color: #FFFFFF; text-align: center; }
+    .woori-table th { background-color: #D4AF37; color: #000000; border: 1px solid #555; padding: 8px; font-weight: bold; }
+    .woori-table td { background-color: #1A1A1A; border: 1px solid #444; padding: 8px; }
+    .woori-table tr:hover td { background-color: #333; cursor: pointer; }
     .sub-header { background-color: #B89630 !important; font-size: 0.8rem; }
     .remark { color: #FF6B6B; font-size: 0.8rem; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("WOORI PRICE MASTER (HP 양식)")
+st.title("WOORI PRICE MASTER")
 
 # ==========================================
-# [사이드바] 설정 영역 (Gap 및 기준가)
+# [사이드바] 구간 변동폭(Gap) 설정
 # ==========================================
 with st.sidebar:
-    st.header("⚙️ 단가/구간 설정")
+    st.header("⚙️ 구간(Gap) 설정")
     
-    st.subheader("1. EPS 설정")
-    gap_eps_gen = st.number_input("EPS 일반 구간폭", value=800, step=100)
-    gap_eps_nan = st.number_input("EPS 난연 구간폭", value=1400, step=100)
-    gap_eps_cert = st.number_input("EPS 인증 구간폭", value=2500, step=100)
-    
-    st.divider()
-    
-    st.subheader("2. 그라스울 설정")
-    gap_gw_48 = st.number_input("GW 48K 구간폭", value=2400, step=100)
-    gap_gw_64 = st.number_input("GW 64K 구간폭", value=3200, step=100)
+    st.subheader("1. EPS 구간폭")
+    gap_eps_gen = st.number_input("일반 구간폭", value=800, step=100)
+    gap_eps_nan = st.number_input("난연 구간폭", value=1400, step=100)
+    gap_eps_cert = st.number_input("인증 구간폭", value=2500, step=100)
     
     st.divider()
     
-    st.subheader("3. 우레탄 설정")
-    gap_ure_gen = st.number_input("우레탄 일반 구간폭", value=4000, step=100)
-    gap_ure_cert = st.number_input("우레탄 인증 구간폭", value=5000, step=100)
+    st.subheader("2. 그라스울 구간폭")
+    gap_gw_48 = st.number_input("48K 구간폭", value=2400, step=100)
+    gap_gw_64 = st.number_input("64K 구간폭", value=3200, step=100)
+    
+    st.divider()
+    
+    st.subheader("3. 우레탄 구간폭")
+    gap_ure_gen = st.number_input("일반 구간폭", value=4000, step=100)
+    gap_ure_cert = st.number_input("인증 구간폭", value=5000, step=100)
 
 # ==========================================
 # [메인] 탭 구성
@@ -62,16 +62,16 @@ tab_eps, tab_gw, tab_ure = st.tabs(["🟦 EPS 단가표", "🟨 그라스울 단
 
 # --- EPS 탭 ---
 with tab_eps:
-    # 50T 기준가 입력 (메인 화면)
+    # 50T 기준가 입력
     c1, c2, c3, c4 = st.columns(4)
     with c1: base_eps_gen_35 = st.number_input("EPS 일반 (0.35T) 50T", value=9400)
     with c2: base_eps_gen_05 = st.number_input("EPS 일반 (0.5T) 50T", value=14000)
     with c3: base_eps_nan_05 = st.number_input("EPS 난연 (0.5T) 50T", value=15400)
-    with c4: base_eps_cert = st.number_input("EPS 인증 75T 시작가", value=22800) # 인증은 75T부터
+    with c4: base_eps_cert = st.number_input("EPS 인증 75T 시작가", value=22800)
 
-    # 테이블 헤더 (HP 양식 그대로)
+    # 테이블 헤더
     html = f"""
-    <table class="hp-table">
+    <table class="woori-table">
         <thead>
             <tr>
                 <th rowspan="2">구분</th>
@@ -97,26 +97,21 @@ with tab_eps:
         <tbody>
     """
 
-    # 데이터 생성 루프
     thicknesses = [50, 75, 100, 125, 150, 155, 175, 200, 225, 250, 260]
     
     for i, t in enumerate(thicknesses):
         # 가격 계산 logic: 50T 베이스 + (인덱스 * 구간폭)
-        # 난연 0.35T는 0.5T 대비 -1400원 정도로 가정하거나 별도 입력받을 수 있음. 여기선 0.5T-1400 자동계산
         p_gen_35 = base_eps_gen_35 + (i * gap_eps_gen)
         p_gen_05 = base_eps_gen_05 + (i * gap_eps_gen)
         
         p_nan_05 = base_eps_nan_05 + (i * gap_eps_nan)
-        p_nan_35 = p_nan_05 - 1400 # 난연 0.35는 보통 0.5보다 저렴 (가정)
+        p_nan_35 = p_nan_05 - 1400 
 
-        # 인증은 75T부터 시작 (인덱스 1부터)
         if t < 75:
             p_cert = "-"
         else:
-            # 75T가 인덱스 1이므로, (i-1)을 곱해줌
             p_cert = f"{base_eps_cert + ((i-1) * gap_eps_cert):,}"
 
-        # 비고
         rem = ""
         if t==75: rem="유니스톤"
         if t==100: rem="유니스톤, 코르텐"
@@ -143,10 +138,10 @@ with tab_gw:
     c1, c2, c3 = st.columns(3)
     with c1: base_gw48 = st.number_input("GW 48K 50T", value=20400)
     with c2: base_gw64 = st.number_input("GW 64K 50T", value=22400)
-    with c3: st.info("ℹ️ 내화구조는 125T부터 자동 계산됩니다.")
+    with c3: st.info("ℹ️ 내화구조는 125T부터 자동 계산")
 
     html = f"""
-    <table class="hp-table">
+    <table class="woori-table">
         <thead>
             <tr>
                 <th rowspan="2">구분</th>
@@ -172,9 +167,7 @@ with tab_gw:
         p48 = base_gw48 + (i * gap_gw_48)
         p64 = base_gw64 + (i * gap_gw_64)
         
-        # 내화 (125T 이상) - 불연 가격에 +알파 (여기선 예시로 +5000, +8000 등 갭 적용)
         if t >= 125:
-            # 내화 베이스가 불연보다 비쌈. 여기선 로직상 불연가격 + 갭 누적으로 표현
             fire_30 = p48 + 5000 
             fire_60_48 = p48 + 6000
             fire_60_64 = p64 + 6000
@@ -207,7 +200,7 @@ with tab_ure:
     with c2: base_ure_cert = st.number_input("우레탄 인증 50T", value=32000)
 
     html = f"""
-    <table class="hp-table">
+    <table class="woori-table">
         <thead>
             <tr>
                 <th rowspan="2">구분</th>
