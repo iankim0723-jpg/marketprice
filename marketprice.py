@@ -1,89 +1,76 @@
 import streamlit as st
+import pandas as pd
+import io
 
-# 1. 페이지 기본 설정 및 다크모드 가독성 강제 고정
-st.set_page_config(page_title="WOORI COST SOLVER", layout="centered")
+# 1. 페이지 설정 및 다크모드 고정
+st.set_page_config(page_title="WOORI COST MASTER", layout="wide")
 
 st.markdown("""
     <style>
     .stApp { background-color: #000000; color: #FFFFFF; }
-    h1, h2, h3 { color: #D4AF37 !important; text-align: center; font-weight: bold; }
+    h1, h2, h3 { color: #D4AF37 !important; text-align: center; }
     label, p, span { color: #FFFFFF !important; font-weight: bold; }
-    /* 입력창 글자색 검정 방지 */
     input { background-color: #262626 !important; color: #FFFFFF !important; border: 1px solid #D4AF37 !important; }
-    /* 선택박스 배경 및 글자색 강제 고정 */
-    div[data-baseweb="select"] > div { background-color: #262626 !important; color: #FFFFFF !important; }
-    div[role="listbox"] { background-color: #262626 !important; color: #FFFFFF !important; }
-    /* 버튼: 금색 배경 / 검정 글자 */
-    .stButton>button { 
-        width: 100%; background-color: #D4AF37 !important; color: #000000 !important; 
-        font-weight: bold !important; border-radius: 12px; height: 3.5em; border: none;
-    }
-    /* 결과값 숫자 강조 */
-    div[data-testid="stMetricValue"] { color: #D4AF37 !important; font-size: 3rem !important; font-weight: bold; text-align: center; }
+    /* 테이블 스타일 */
+    .styled-table { width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 0.9em; min-width: 400px; background-color: #1A1A1A; }
+    .styled-table th { background-color: #D4AF37; color: #000000; text-align: center; padding: 12px 15px; }
+    .styled-table td { padding: 10px 15px; border-bottom: 1px solid #333; text-align: center; }
+    .stButton>button { width: 100%; background-color: #D4AF37 !important; color: #000000 !important; font-weight: bold !important; border-radius: 12px; height: 3em; border: none; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("WOORI COST SOLVER")
+st.title("WOORI COST MASTER (HP 양식)")
 
-# --- 입력 섹션 ---
-st.subheader("1. 원자재 매입가 설정")
-col1, col2 = st.columns(2)
-with col1:
-    ext_coil_p = st.number_input("외부 코일 (kg당/원)", value=1100)
-    int_coil_p = st.number_input("내부 코일 (kg당/원)", value=1100)
-with col2:
-    gw_48k_p = st.number_input("그라스울 48k (kg당/원)", value=1770)
-    gw_64k_p = st.number_input("그라스울 64k (kg당/원)", value=1600)
+# --- 2. 기본 정보 입력 (Side Bar) ---
+with st.sidebar:
+    st.header("⚙️ 단가표 생성 설정")
+    ext_p = st.number_input("외부 코일 (kg)", value=1100)
+    int_p = st.number_input("내부 코일 (kg)", value=1100)
+    gw_48_p = st.number_input("GW 48k (kg)", value=1770)
+    gw_64_p = st.number_input("GW 64k (kg)", value=1600)
+    eps_50t_p = st.number_input("EPS 50T 보드값", value=3650)
+    proc_f = st.number_input("가공비(인건비+소모품)", value=2700) # 인건비 2000원 포함
+    margin_rate = st.slider("마진율 (%)", 0, 30, 10)
 
-st.write("---")
+# --- 3. 데이터 생성 로직 ---
+def calculate_cost(thick, core, coil_type):
+    # 코일비 계산 (외부 4.784, 내부 4.082)
+    cw = (4.784 * ext_p + 4.082 * int_p) if coil_type == "내외" else (4.082 * int_p * 2)
+    # 심재비 계산
+    if core == "EPS": core_v = (thick / 50) * eps_50t_p
+    elif core == "GW48": core_v = (thick / 1000) * 48 * 1.219 * gw_48_p
+    elif core == "GW64": core_v = (thick / 1000) * 64 * 1.219 * gw_64_p
+    else: core_v = (thick / 50) * 18000
+    # 합계
+    cost = cw + core_v + proc_f
+    return int(cost * (1 + margin_rate/100))
 
-st.subheader("2. 제품 사양 선택")
-# 심재 선택
-material = st.selectbox("심재 종류", ["EPS", "그라스울(48k)", "그라스울(64k)", "우레탄"])
+# HP 양식 두께 리스트
+t_list = [50, 75, 100, 125, 150, 175, 200, 225, 250, 260]
 
-col3, col4 = st.columns(2)
-with col3:
-    # 대표님 데이터: EPS 50T 보드값 3,650원 기준
-    default_m_p = 3650 if material == "EPS" else 18000 # 우레탄은 임시값
-    # 그라스울은 kg당 단가를 사용하므로 보드값 입력창 비활성화 처리 가능
-    m_label = "보드값/원액비 (m당)" if material != "그라스울(48k)" and material != "그라스울(64k)" else "심재 단가는 상단 매입가 적용됨"
-    m_price = st.number_input(m_label, value=default_m_p if "그라스울" not in material else 0)
-with col4:
-    thickness = st.number_input("제품 두께 (T)", value=150)
+# 데이터프레임 구성
+data = {
+    "두께(T)": [f"{t}T" for t in t_list],
+    "EPS 벽체(내외)": [f"{calculate_cost(t, 'EPS', '내외'):,}" for t in t_list],
+    "EPS 지붕(내외)": [f"{calculate_cost(t, 'EPS', '내외') + 500:,}" for t in t_list], # 지붕 할증 예시
+    "GW 48K 벽체": [f"{calculate_cost(t, 'GW48', '내외'):,}" for t in t_list],
+    "GW 64K 벽체": [f"{calculate_cost(t, 'GW64', '내외'):,}" for t in t_list]
+}
+df = pd.DataFrame(data)
 
-coil_opt = st.radio("코일 조합", ["외부(1219) + 내부(1040)", "내부(1040) + 내부(1040)"], horizontal=True)
+# --- 4. 화면 출력 ---
+st.subheader(f"📊 실시간 단가표 (마진 {margin_rate}% 포함)")
 
-# 고정비: 인건비 2,000원 + 소모품 700원 = 2,700원
-process_fee = 2700
+# HP 스타일 테이블 출력
+st.write(df.to_html(classes='styled-table', index=False), unsafe_allow_html=True)
 
-# --- 계산 엔진 ---
-# 1. 코일비 (중량: 1219폭 4.784kg / 1040폭 4.082kg)
-if "외부" in coil_opt:
-    cost_coil = (4.784 * ext_coil_p) + (4.082 * int_coil_p)
-else:
-    cost_coil = (4.082 * int_coil_p) * 2
-
-# 2. 심재비
-if material == "EPS":
-    cost_core = (thickness / 50) * m_price
-elif "그라스울" in material:
-    density = 48 if "48k" in material else 64
-    kg_price = gw_48k_p if density == 48 else gw_64k_p
-    # 그라스울 중량 공식: 두께(m) * 밀도 * 폭(1.219)
-    cost_core = (thickness / 1000) * density * 1.219 * kg_price
-else: # 우레탄
-    cost_core = (thickness / 50) * m_price
-
-# 최종 합계
-total_cost = int(cost_coil + cost_core + process_fee)
-
-# --- 결과 섹션 ---
-st.write("---")
-st.write("### 💰 산출된 제조 원가 (1m)")
-st.metric(label="", value=f"{total_cost:,} 원")
-
-# 공유용 텍스트
-if st.button("카톡 공유용 결과 복사"):
-    share_msg = f"[우리 스틸 테크]\n{material} {thickness}T ({coil_opt})\n원가: {total_cost:,}원"
-    st.code(share_msg)
-    st.success("위 코드를 복사해서 카톡에 붙여넣으세요!")
+# 엑셀 다운로드 기능
+output = io.BytesIO()
+with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
+    df.to_excel(writer, index=False, sheet_name='단가표')
+st.download_button(
+    label="📥 엑셀 파일로 다운로드",
+    data=output.getvalue(),
+    file_name="WOORI_Price_List.xlsx",
+    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+)
