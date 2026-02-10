@@ -1,76 +1,78 @@
 import streamlit as st
 import pandas as pd
-import io
 
-# 1. 페이지 설정 및 다크모드 고정
-st.set_page_config(page_title="WOORI COST MASTER", layout="wide")
+# 페이지 설정
+st.set_page_config(page_title="WOORI PRICE MASTER", layout="wide")
 
+# 가독성 극대화 CSS (글씨가 안 보이는 문제 해결)
 st.markdown("""
     <style>
-    .stApp { background-color: #000000; color: #FFFFFF; }
-    h1, h2, h3 { color: #D4AF37 !important; text-align: center; }
-    label, p, span { color: #FFFFFF !important; font-weight: bold; }
-    input { background-color: #262626 !important; color: #FFFFFF !important; border: 1px solid #D4AF37 !important; }
-    /* 테이블 스타일 */
-    .styled-table { width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 0.9em; min-width: 400px; background-color: #1A1A1A; }
-    .styled-table th { background-color: #D4AF37; color: #000000; text-align: center; padding: 12px 15px; }
-    .styled-table td { padding: 10px 15px; border-bottom: 1px solid #333; text-align: center; }
-    .stButton>button { width: 100%; background-color: #D4AF37 !important; color: #000000 !important; font-weight: bold !important; border-radius: 12px; height: 3em; border: none; }
+    /* 배경은 검정, 글자는 완전 흰색 */
+    .stApp { background-color: #000000; color: #FFFFFF !important; }
+    
+    /* 제목 및 강조색 (금색) */
+    h1, h2, h3 { color: #D4AF37 !important; text-align: left; font-weight: bold; }
+    
+    /* 입력창 및 라벨 가독성 */
+    label, p, span { color: #FFFFFF !important; font-size: 1.1rem !important; font-weight: bold; }
+    input { background-color: #262626 !important; color: #FFFFFF !important; border: 2px solid #D4AF37 !important; font-size: 1.2rem !important; }
+    
+    /* 테이블 디자인 (글씨 구분 확실하게) */
+    .styled-table { width: 100%; border-collapse: collapse; margin: 25px 0; font-size: 1.1rem; background-color: #1A1A1A; color: #FFFFFF; }
+    .styled-table th { background-color: #D4AF37; color: #000000; padding: 15px; border: 1px solid #444; }
+    .styled-table td { padding: 12px; border: 1px solid #444; text-align: center; font-weight: bold; }
+    .styled-table tr:nth-child(even) { background-color: #262626; }
+    
+    /* 버튼 */
+    .stButton>button { width: 100%; background-color: #D4AF37 !important; color: #000000 !important; font-weight: bold !important; height: 3.5em; border-radius: 10px; }
     </style>
     """, unsafe_allow_html=True)
 
-st.title("WOORI COST MASTER (HP 양식)")
+st.title("WOORI COST MASTER")
 
-# --- 2. 기본 정보 입력 (Side Bar) ---
-with st.sidebar:
-    st.header("⚙️ 단가표 생성 설정")
-    ext_p = st.number_input("외부 코일 (kg)", value=1100)
-    int_p = st.number_input("내부 코일 (kg)", value=1100)
-    gw_48_p = st.number_input("GW 48k (kg)", value=1770)
-    gw_64_p = st.number_input("GW 64k (kg)", value=1600)
-    eps_50t_p = st.number_input("EPS 50T 보드값", value=3650)
-    proc_f = st.number_input("가공비(인건비+소모품)", value=2700) # 인건비 2000원 포함
-    margin_rate = st.slider("마진율 (%)", 0, 30, 10)
+# --- 설정값 입력 ---
+col1, col2 = st.columns(2)
+with col1:
+    ext_p = st.number_input("외부 코일 매입가 (kg)", value=1100)
+    int_p = st.number_input("내부 코일 매입가 (kg)", value=1100)
+with col2:
+    eps_50t_base = st.number_input("EPS 50T 보드 기준가 (m)", value=3650)
+    proc_f = st.number_input("가공비 (인건비+소모품)", value=2700) # 인건비 2,000원 포함
 
-# --- 3. 데이터 생성 로직 ---
-def calculate_cost(thick, core, coil_type):
-    # 코일비 계산 (외부 4.784, 내부 4.082)
-    cw = (4.784 * ext_p + 4.082 * int_p) if coil_type == "내외" else (4.082 * int_p * 2)
-    # 심재비 계산
-    if core == "EPS": core_v = (thick / 50) * eps_50t_p
-    elif core == "GW48": core_v = (thick / 1000) * 48 * 1.219 * gw_48_p
-    elif core == "GW64": core_v = (thick / 1000) * 64 * 1.219 * gw_64_p
-    else: core_v = (thick / 50) * 18000
-    # 합계
-    cost = cw + core_v + proc_f
-    return int(cost * (1 + margin_rate/100))
+st.write("---")
 
-# HP 양식 두께 리스트
+# --- 변동폭(Gap) 기반 단가 산출 로직 ---
+# 코일비 계산 (외부 1219폭: 4.784kg / 내부 1040폭: 4.082kg)
+cost_coil_base = (4.784 * ext_p) + (4.082 * int_p) 
+
+# 두께 리스트 및 변동폭 적용
+# HP 양식의 핵심은 50T 대비 두께가 늘어날 때의 자재비 증가분(Gap)입니다.
 t_list = [50, 75, 100, 125, 150, 175, 200, 225, 250, 260]
 
-# 데이터프레임 구성
-data = {
-    "두께(T)": [f"{t}T" for t in t_list],
-    "EPS 벽체(내외)": [f"{calculate_cost(t, 'EPS', '내외'):,}" for t in t_list],
-    "EPS 지붕(내외)": [f"{calculate_cost(t, 'EPS', '내외') + 500:,}" for t in t_list], # 지붕 할증 예시
-    "GW 48K 벽체": [f"{calculate_cost(t, 'GW48', '내외'):,}" for t in t_list],
-    "GW 64K 벽체": [f"{calculate_cost(t, 'GW64', '내외'):,}" for t in t_list]
-}
-df = pd.DataFrame(data)
+def get_total_price(t):
+    # 50T 기준에서 두께 증가분에 따른 보드값 갭 계산
+    core_gap_price = (t / 50) * eps_50t_base
+    return int(cost_coil_base + core_gap_price + proc_f)
 
-# --- 4. 화면 출력 ---
-st.subheader(f"📊 실시간 단가표 (마진 {margin_rate}% 포함)")
+# 데이터 생성
+results = []
+for t in t_list:
+    price = get_total_price(t)
+    results.append({
+        "두께(T)": f"{t}T",
+        "제조 원가(m당)": f"{price:,} 원",
+        "비고": "50T 대비 증가분 반영"
+    })
 
-# HP 스타일 테이블 출력
+df = pd.DataFrame(results)
+
+# --- 결과 출력 (테이블) ---
+st.subheader("📊 실시간 원가 산출표")
 st.write(df.to_html(classes='styled-table', index=False), unsafe_allow_html=True)
 
-# 엑셀 다운로드 기능
-output = io.BytesIO()
-with pd.ExcelWriter(output, engine='xlsxwriter') as writer:
-    df.to_excel(writer, index=False, sheet_name='단가표')
-st.download_button(
-    label="📥 엑셀 파일로 다운로드",
-    data=output.getvalue(),
-    file_name="WOORI_Price_List.xlsx",
-    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-)
+# 카톡용 복사
+if st.button("카톡 공유용 텍스트 생성"):
+    msg = "[우리 스틸 테크 원가]\n"
+    for t in t_list:
+        msg += f"{t}T: {get_total_price(t):,}원\n"
+    st.code(msg)
