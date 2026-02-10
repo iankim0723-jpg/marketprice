@@ -24,7 +24,7 @@ st.title("WOORI PRICE MASTER")
 # ==========================================
 with st.sidebar:
     st.header("⚙️ 구간(Gap) 설정")
-    st.info("두께 25T 증가 시 추가되는 금액")
+    st.info("25T 단위 두께 증가 시 추가 금액")
     
     st.subheader("1. EPS Gap")
     gap_eps_gen = st.number_input("EPS 일반 Gap", value=800, step=100)
@@ -51,7 +51,6 @@ def make_html_table(title, base_price_dict, thick_list, gap_dict, material_type=
         cols = ""
         
         if material_type == "EPS":
-            # EPS: 일반0.35, 일반0.5, 난연0.35, 난연0.5, 인증
             p_gen05 = base_price_dict['gen'] + (i * gap_dict['gen'])
             p_gen35 = base_price_dict.get('gen35', p_gen05 - 4600)
             p_nan05 = base_price_dict['nan'] + (i * gap_dict['nan'])
@@ -86,10 +85,10 @@ def make_html_table(title, base_price_dict, thick_list, gap_dict, material_type=
             p_cert = base_price_dict['cert'] + (i * gap_dict['cert'])
             cols = f"<td>{p_gen:,}</td> <td>{p_cert:,}</td>"
 
-        # 비고란(td) 삭제됨
+        # 비고란(td) 삭제
         rows += f"<tr><td>{t}T</td>{cols}</tr>"
 
-    # 헤더 생성 (비고란 th 삭제됨)
+    # 헤더 생성 (비고란 th 삭제)
     header = ""
     if material_type == "EPS":
         header = """
@@ -125,7 +124,6 @@ def make_html_table(title, base_price_dict, thick_list, gap_dict, material_type=
         </table>
     </div>
     """
-
 
 # ==========================================
 # [메인] 탭 구성
@@ -220,77 +218,67 @@ with tab_ure:
 
 
 # ==========================================
-# [하단 고정] 별도 옵션 및 추가 비용 (수정1.png 반영)
+# [하단 고정] 1. 공통사항 (이미지 반영) & 2. 별도 옵션 (텍스트 반영)
 # ==========================================
 st.markdown("---")
-st.subheader("📌 별도 옵션 및 추가 비용 기준")
+st.subheader("📌 공통 기준 및 별도 옵션")
 
-# 아래 변수가 끊기지 않도록 주의하세요 (따옴표 3개로 시작하고 끝납니다)
+# ★ 아래 footer_html 부분이 중간에 끊기지 않도록 주의하세요 ★
 footer_html = """
 <style>
-    .footer-table { width: 100%; border-collapse: collapse; color: white; font-size: 14px; text-align: center; font-family: sans-serif; }
-    .footer-table th { background-color: #333; color: #D4AF37; border: 1px solid #555; padding: 10px; }
-    .footer-table td { background-color: #1A1A1A; border: 1px solid #444; padding: 10px; }
+    .footer-container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; font-family: sans-serif; color: white; }
+    .box { flex: 1; min-width: 400px; border: 1px solid #444; padding: 10px; background-color: #111; }
+    .box h4 { color: #D4AF37; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 5px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; }
+    th { background-color: #333; color: #D4AF37; border: 1px solid #555; padding: 6px; }
+    td { background-color: #1A1A1A; border: 1px solid #444; padding: 6px; }
     .plus { color: #FF6B6B; font-weight: bold; }
     .minus { color: #4dabf7; font-weight: bold; }
 </style>
 
-<div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
-    <div style="flex: 1; max-width: 800px;">
-        <table class="footer-table">
-            <tr>
-                <th colspan="4" style="font-size: 16px;">📋 추가 옵션 및 코일 변경 단가 (M당)</th>
-            </tr>
-            <tr>
-                <th>구분</th>
-                <th>항목</th>
-                <th>금액 (VAT별도)</th>
-                <th>비고</th>
-            </tr>
-            <tr>
-                <td rowspan="6">코일/색상<br>변경</td>
-                <td>보호 필름</td>
-                <td class="plus">+ 300 원</td>
-                <td>기본 사양 외</td>
-            </tr>
-            <tr>
-                <td>일면 유색</td>
-                <td class="plus">+ 500 원</td>
-                <td>오렌지, 검정, 노랑 등</td>
-            </tr>
-            <tr>
-                <td>유니스톤</td>
-                <td class="plus">+ 1,000 원</td>
-                <td>고급 질감 코일</td>
-            </tr>
-            <tr>
-                <td>리얼 / 코르텐 / 징크</td>
-                <td class="plus">+ 2,000 원</td>
-                <td>특수 패턴 코일</td>
-            </tr>
-             <tr>
-                <td>일면 유색 (공제)</td>
-                <td class="minus">- 1,000 원</td>
-                <td>특정 조건 시</td>
-            </tr>
-             <tr>
-                <td>유니스톤 (공제)</td>
-                <td class="minus">- 500 원</td>
-                <td>특정 조건 시</td>
-            </tr>
-            <tr>
-                <td rowspan="2">철판 두께<br>변경</td>
-                <td>0.6T 변경</td>
-                <td class="plus">+ 1,700 원</td>
-                <td>기본 0.5T 대비</td>
-            </tr>
-            <tr>
-                <td>0.8T 변경</td>
-                <td class="plus">+ 4,700 원</td>
-                <td>기본 0.5T 대비</td>
-            </tr>
+<div class="footer-container">
+    <div class="box">
+        <h4>1. 공통사항 및 내화인증</h4>
+        <table>
+            <tr><th colspan="2">기본 공통</th></tr>
+            <tr><td>보호필름</td><td class="plus">+300원</td></tr>
+            <tr><td>특이색상(오렌지/검정/노랑)</td><td class="plus">+500원</td></tr>
+            <tr><td>캐노피/행가 (50T)</td><td>20,500원</td></tr>
+            <tr><td>캐노피/행가 (75T)</td><td>21,900원</td></tr>
+        </table>
+        <br>
+        <table>
+            <tr><th colspan="5">내화인증 기준 (그라스울)</th></tr>
+            <tr><th>타입</th><th>두께</th><th>밀도</th><th>성능</th><th>비고</th></tr>
+            <tr><td>벽체</td><td>125T~</td><td>48K</td><td>1시간</td><td>무하지</td></tr>
+            <tr><td>외벽</td><td>100T~</td><td>48K</td><td>0.5시간</td><td>하지1700↓</td></tr>
+            <tr><td>지붕</td><td>184T~</td><td>48K</td><td>0.5시간</td><td>하지1200↓</td></tr>
+            <tr><td>징크</td><td>125T~</td><td>64K</td><td>1시간</td><td>하지1700↓</td></tr>
+        </table>
+    </div>
+
+    <div class="box">
+        <h4>2. 품목별 별도 옵션</h4>
+        <table>
+            <tr><th>구분</th><th>항목</th><th>금액</th></tr>
+            
+            <tr><td>벽체</td><td>일면 유색</td><td class="plus">+500원</td></tr>
+            
+            <tr><td rowspan="4">외벽체/지붕</td><td>유니스톤</td><td class="plus">+1,000원</td></tr>
+            <tr><td>리얼/코르텐/징크</td><td class="plus">+2,000원</td></tr>
+            <tr><td>0.6T 변경</td><td class="plus">+1,700원</td></tr>
+            <tr><td>0.8T 변경</td><td class="plus">+4,700원</td></tr>
+            
+            <tr><td rowspan="2">징크</td><td>유니스톤</td><td class="minus">-500원 (공제)</td></tr>
+            <tr><td>일면 유색</td><td class="minus">-1,000원 (공제)</td></tr>
+            
+            <tr><td rowspan="2">라인메탈</td><td>메지 간격</td><td>1000 고정</td></tr>
+            <tr><td>0.8T 변경</td><td class="plus">+3,400원</td></tr>
+            <tr><td colspan="3" style="color:#aaa;">*기본색상: 은회색 헤어라인 / 골드</td></tr>
+
+            <tr><td>정메탈</td><td>측면/두걱 가공</td><td style="color:#D4AF37;">별도 견적</td></tr>
         </table>
     </div>
 </div>
 """
-components.html(footer_html, height=500)
+components.html(footer_html, height=800, scrolling=True)
