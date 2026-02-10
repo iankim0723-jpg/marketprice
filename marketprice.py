@@ -214,3 +214,53 @@ if st.sidebar.button("카톡용 텍스트 복사"):
 
 footer_html = """
 <style>
+    .footer-container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; font-family: sans-serif; color: white; }
+    .box { flex: 1; min-width: 350px; border: 1px solid #444; padding: 10px; background-color: #111; }
+    .box h4 { color: #D4AF37; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 5px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; }
+    th { background-color: #333; color: #D4AF37; border: 1px solid #555; padding: 6px; }
+    td { background-color: #1A1A1A; border: 1px solid #444; padding: 6px; }
+    .plus { color: #FF6B6B; font-weight: bold; }
+    .minus { color: #4dabf7; font-weight: bold; }
+</style>
+
+<div class="footer-container">
+    <div class="box">
+        <h4>1. 공통사항 및 내화인증</h4>
+        <table>
+            <tr><th colspan="2">기본 공통</th></tr>
+            <tr><td>보호필름</td><td class="plus">+300원</td></tr>
+            <tr><td>특이색상(오렌지/검정/노랑)</td><td class="plus">+500원</td></tr>
+            <tr><td>캐노피/행가 (50T)</td><td>20,500원</td></tr>
+            <tr><td>캐노피/행가 (75T)</td><td>21,900원</td></tr>
+        </table>
+        <br>
+        <table>
+            <tr><th colspan="5">내화인증 기준 (그라스울)</th></tr>
+            <tr><th>타입</th><th>두께</th><th>밀도</th><th>성능</th><th>비고</th></tr>
+            <tr><td>벽체</td><td>125T~</td><td>48K</td><td>1시간</td><td>무하지</td></tr>
+            <tr><td>외벽</td><td>100T~</td><td>48K</td><td>0.5시간</td><td>하지1700↓</td></tr>
+            <tr><td>지붕</td><td>184T~</td><td>48K</td><td>0.5시간</td><td>하지1200↓</td></tr>
+            <tr><td>징크</td><td>125T~</td><td>64K</td><td>1시간</td><td>하지1700↓</td></tr>
+        </table>
+    </div>
+
+    <div class="box">
+        <h4>2. 품목별 별도 옵션</h4>
+        <table>
+            <tr><th>구분</th><th>항목</th><th>금액</th></tr>
+            <tr><td>벽체</td><td>일면 유색</td><td class="plus">+500원</td></tr>
+            <tr><td rowspan="4">외벽체/지붕</td><td>유니스톤</td><td class="plus">+1,000원</td></tr>
+            <tr><td>리얼/코르텐/징크</td><td class="plus">+2,000원</td></tr>
+            <tr><td>0.6T 변경</td><td class="plus">+1,700원</td></tr>
+            <tr><td>0.8T 변경</td><td class="plus">+4,700원</td></tr>
+            <tr><td rowspan="2">징크</td><td>유니스톤</td><td class="minus">-500원 (공제)</td></tr>
+            <tr><td>일면 유색</td><td class="minus">-1,000원 (공제)</td></tr>
+            <tr><td rowspan="2">라인메탈</td><td>메지 간격</td><td>1000 고정</td></tr>
+            <tr><td>0.8T 변경</td><td class="plus">+3,400원</td></tr>
+            <tr><td>정메탈</td><td>측면/두걱 가공</td><td style="color:#D4AF37;">별도 견적</td></tr>
+        </table>
+    </div>
+</div>
+"""
+components.html(footer_html, height=800, scrolling=True)
