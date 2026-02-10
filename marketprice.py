@@ -1,63 +1,44 @@
 import streamlit as st
+import textwrap  # ★ 이 친구가 공백을 지워주는 해결사입니다
 
 # 1. 페이지 설정
 st.set_page_config(page_title="WOORI PRICE MASTER", layout="wide")
 
-# 2. 스타일 설정 (깨짐 방지용 CSS)
+# 2. 스타일 설정
 st.markdown("""
     <style>
-    /* 전체 배경 및 폰트 설정 */
     .stApp { background-color: #000000; color: #FFFFFF; }
-    
-    /* 사이드바 */
     [data-testid="stSidebar"] { background-color: #111111; border-right: 1px solid #333; }
-    
-    /* 텍스트 색상 */
     h1, h2, h3, label { color: #D4AF37 !important; font-weight: bold; }
     p, div, span { color: #FFFFFF; }
-    
-    /* 입력창 */
     input { background-color: #262626 !important; color: #FFFFFF !important; border: 1px solid #D4AF37 !important; }
     
-    /* 탭 */
+    /* 탭 스타일 */
     .stTabs [data-baseweb="tab-list"] { gap: 10px; }
     .stTabs [data-baseweb="tab"] { background-color: #222; border-radius: 5px; color: white; }
     .stTabs [aria-selected="true"] { background-color: #D4AF37 !important; color: black !important; font-weight: bold; }
 
-    /* ★ 표 디자인 (가장 중요) ★ */
+    /* 표 디자인 */
     .woori-table {
-        width: 100%;
-        border-collapse: collapse;
-        color: #FFFFFF;
-        font-size: 0.95rem;
-        text-align: center;
+        width: 100%; border-collapse: collapse; color: #FFFFFF; font-size: 0.95rem; text-align: center;
     }
     .woori-table th {
-        background-color: #D4AF37;
-        color: #000000;
-        border: 1px solid #555;
-        padding: 12px;
-        font-weight: bold;
+        background-color: #D4AF37; color: #000000; border: 1px solid #555; padding: 12px; font-weight: bold;
     }
     .woori-table td {
-        background-color: #1A1A1A;
-        border: 1px solid #444;
-        padding: 10px;
+        background-color: #1A1A1A; border: 1px solid #444; padding: 10px;
     }
-    .woori-table tr:hover td {
-        background-color: #333;
-    }
+    .woori-table tr:hover td { background-color: #333; }
     </style>
     """, unsafe_allow_html=True)
 
 st.title("WOORI PRICE MASTER")
 
 # ==========================================
-# [사이드바] 구간 변동폭(Gap) 설정
+# [사이드바] 설정
 # ==========================================
 with st.sidebar:
     st.header("⚙️ 구간(Gap) 설정")
-    st.info("50T 대비 두께별 인상액 설정")
     
     st.subheader("1. EPS 구간폭")
     gap_eps_gen = st.number_input("일반 구간폭", value=800, step=100)
@@ -78,37 +59,30 @@ with st.sidebar:
 
 
 # ==========================================
-# [메인] 탭 구성 및 표 생성
+# [메인] 탭 구성
 # ==========================================
 tab_eps, tab_gw, tab_ure = st.tabs(["🟦 EPS 단가표", "🟨 그라스울 단가표", "🟥 우레탄 단가표"])
 
 # --- 1. EPS 탭 ---
 with tab_eps:
-    # 50T 기준가 입력
     c1, c2, c3, c4 = st.columns(4)
     with c1: base_eps_gen_35 = st.number_input("EPS 일반 (0.35T) 50T", value=9400)
     with c2: base_eps_gen_05 = st.number_input("EPS 일반 (0.5T) 50T", value=14000)
     with c3: base_eps_nan_05 = st.number_input("EPS 난연 (0.5T) 50T", value=15400)
     with c4: base_eps_cert = st.number_input("EPS 인증 75T 시작가", value=22800)
 
-    # 데이터 행 만들기
     rows_html = ""
     thicknesses = [50, 75, 100, 125, 150, 155, 175, 200, 225, 250, 260]
     
     for i, t in enumerate(thicknesses):
-        # 가격 계산
         p_gen_35 = base_eps_gen_35 + (i * gap_eps_gen)
         p_gen_05 = base_eps_gen_05 + (i * gap_eps_gen)
         p_nan_05 = base_eps_nan_05 + (i * gap_eps_nan)
         p_nan_35 = p_nan_05 - 1400
         
-        # 인증 가격 (75T부터 시작)
-        if t < 75:
-            p_cert = "-"
-        else:
-            p_cert = f"{base_eps_cert + ((i-1) * gap_eps_cert):,}"
+        if t < 75: p_cert = "-"
+        else: p_cert = f"{base_eps_cert + ((i-1) * gap_eps_cert):,}"
             
-        # 비고
         rem = ""
         if t==75: rem="유니스톤"
         elif t==100: rem="유니스톤, 코르텐"
@@ -116,18 +90,13 @@ with tab_eps:
 
         rows_html += f"""
         <tr>
-            <td>벽체</td>
-            <td>{t}T</td>
-            <td>{p_gen_35:,}</td>
-            <td>{p_gen_05:,}</td>
-            <td>{p_nan_35:,}</td>
-            <td>{p_nan_05:,}</td>
-            <td>{p_cert}</td>
-            <td style="color:#FF6B6B;">{rem}</td>
+            <td>벽체</td> <td>{t}T</td>
+            <td>{p_gen_35:,}</td> <td>{p_gen_05:,}</td> <td>{p_nan_35:,}</td> <td>{p_nan_05:,}</td>
+            <td>{p_cert}</td> <td style="color:#FF6B6B;">{rem}</td>
         </tr>"""
 
-    # 표 전체 조립 (HTML)
-    full_html = f"""
+    # ★ 여기서 textwrap.dedent를 사용해 공백을 제거합니다 (깨짐 방지 핵심) ★
+    eps_table = textwrap.dedent(f"""
     <table class="woori-table">
         <thead>
             <tr>
@@ -146,8 +115,8 @@ with tab_eps:
             {rows_html}
         </tbody>
     </table>
-    """
-    st.markdown(full_html, unsafe_allow_html=True)
+    """)
+    st.markdown(eps_table, unsafe_allow_html=True)
 
 
 # --- 2. 그라스울 탭 ---
@@ -157,7 +126,7 @@ with tab_gw:
     with c2: base_gw64 = st.number_input("GW 64K 50T", value=22400)
     with c3: st.warning("내화구조는 125T부터 자동 계산")
 
-    rows_html = ""
+    gw_rows = ""
     t_gw = [50, 75, 100, 125, 138, 150, 184, 200, 220, 250]
     
     for i, t in enumerate(t_gw):
@@ -168,21 +137,16 @@ with tab_gw:
             f30 = f"{p48 + 5000:,}"
             f60_48 = f"{p48 + 6000:,}"
             f60_64 = f"{p64 + 6000:,}"
-        else:
-            f30 = f60_48 = f60_64 = "-"
+        else: f30 = f60_48 = f60_64 = "-"
 
-        rows_html += f"""
+        gw_rows += f"""
         <tr>
-            <td>벽체/지붕</td>
-            <td>{t}T</td>
-            <td>{p48:,}</td>
-            <td>{p64:,}</td>
-            <td>{f30}</td>
-            <td>{f60_48}</td>
-            <td>{f60_64}</td>
+            <td>벽체/지붕</td> <td>{t}T</td>
+            <td>{p48:,}</td> <td>{p64:,}</td>
+            <td>{f30}</td> <td>{f60_48}</td> <td>{f60_64}</td>
         </tr>"""
 
-    full_html = f"""
+    gw_table = textwrap.dedent(f"""
     <table class="woori-table">
         <thead>
             <tr>
@@ -198,11 +162,11 @@ with tab_gw:
             </tr>
         </thead>
         <tbody>
-            {rows_html}
+            {gw_rows}
         </tbody>
     </table>
-    """
-    st.markdown(full_html, unsafe_allow_html=True)
+    """)
+    st.markdown(gw_table, unsafe_allow_html=True)
 
 
 # --- 3. 우레탄 탭 ---
@@ -211,7 +175,7 @@ with tab_ure:
     with c1: base_ure_gen = st.number_input("우레탄 일반 50T", value=24500)
     with c2: base_ure_cert = st.number_input("우레탄 인증 50T", value=32000)
 
-    rows_html = ""
+    ure_rows = ""
     t_ure = [50, 75, 100, 125, 150]
     
     for i, t in enumerate(t_ure):
@@ -222,14 +186,14 @@ with tab_ure:
         if t==50: rem="일면 유색 +500"
         if t==75: rem="유니스톤"
 
-        rows_html += f"""
+        ure_rows += f"""
         <tr>
             <td>벽체</td> <td>{t}T</td>
             <td>{p_gen:,}</td> <td>{p_cert:,}</td>
             <td style="color:#FF6B6B;">{rem}</td>
         </tr>"""
 
-    full_html = f"""
+    ure_table = textwrap.dedent(f"""
     <table class="woori-table">
         <thead>
             <tr>
@@ -245,8 +209,8 @@ with tab_ure:
             </tr>
         </thead>
         <tbody>
-            {rows_html}
+            {ure_rows}
         </tbody>
     </table>
-    """
-    st.markdown(full_html, unsafe_allow_html=True)
+    """)
+    st.markdown(ure_table, unsafe_allow_html=True)
