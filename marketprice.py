@@ -88,8 +88,8 @@ with st.sidebar:
         
         st.markdown("---")
         st.subheader("1. 기준 단가 (50T 기준)")
-        # 관리자 입력창 (여기서 바꾸면 화면에 즉시 반영)
-        base_eps_cert = st.number_input("EPS 인증 50T", value=17800, step=100)
+        # 관리자 입력창 (모두 일반/기본 50T 기준)
+        base_eps_gen = st.number_input("EPS 일반 50T", value=11500, step=100) # 기존 17800(인증) - 6300 = 11500
         base_gw_wall = st.number_input("GW 벽체 50T (48K)", value=13800, step=100)
         base_ure_wall = st.number_input("URE 벽체 50T", value=24500, step=100)
         
@@ -107,7 +107,7 @@ with st.sidebar:
         
     else:
         # [고객 모드] ★★★★★ 여기서 고정 단가를 수정하세요 ★★★★★
-        base_eps_cert = 17800  # EPS 인증 50T 고정값
+        base_eps_gen = 11500   # EPS 일반 50T 고정값
         base_gw_wall = 13800   # GW 벽체 50T 고정값
         base_ure_wall = 24500  # 우레탄 벽체 50T 고정값
         # ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
@@ -119,12 +119,14 @@ with st.sidebar:
 
 
 # ==========================================
-# [데이터 계산] 품목별 자동 연동 (벽체 기준 +@)
+# [데이터 계산] 품목별 자동 연동
 # ==========================================
 
-# 1. EPS 계산
-# 인증 50T 기준 -> 일반 50T는 -6300원 (가정)
-base_eps_gen = base_eps_cert - 6300 
+# 1. EPS 계산 (일반 50T 기준)
+# 난연 = 일반 + 1400 / 인증 = 일반 + 6300 (가정)
+base_eps_nan = base_eps_gen + 1400
+base_eps_cert = base_eps_gen + 6300
+
 # 품목별 추가금 (벽체 대비)
 d_eps = {'ext': 2400, 'roof': 2900, 'zinc': 4500, 'line': 14700, 'jung': 24300}
 gaps_eps = {'gen': gap_eps_gen, 'nan': gap_eps_nan, 'cert': gap_eps_cert}
@@ -149,14 +151,14 @@ thicks_ur = [50, 75, 100, 125, 150]
 tab_eps, tab_gw, tab_ure = st.tabs(["🟦 EPS 단가표", "🟨 그라스울 단가표", "🟥 우레탄 단가표"])
 
 with tab_eps:
-    if is_admin: st.info(f"관리자 모드: EPS 인증 50T {base_eps_cert:,}원 기준 계산 중")
+    if is_admin: st.info(f"관리자 모드: EPS 일반 50T {base_eps_gen:,}원 기준 계산 중")
     html = style_block
-    html += make_html_table("1. EPS 벽체", {'gen': base_eps_gen, 'nan': base_eps_gen+1400, 'cert': base_eps_cert}, thicks_eps, gaps_eps)
-    html += make_html_table("2. EPS 외벽체", {'gen': base_eps_gen+d_eps['ext'], 'nan': base_eps_gen+d_eps['ext']+1400, 'cert': base_eps_cert+d_eps['ext']}, thicks_eps, gaps_eps)
-    html += make_html_table("3. EPS 지붕", {'gen': base_eps_gen+d_eps['roof'], 'nan': base_eps_gen+d_eps['roof']+1400, 'cert': base_eps_cert+d_eps['roof']}, thicks_eps, gaps_eps)
-    html += make_html_table("4. EPS 징크", {'gen': base_eps_gen+d_eps['zinc'], 'nan': base_eps_gen+d_eps['zinc']+1400, 'cert': base_eps_cert+d_eps['zinc']}, thicks_eps, gaps_eps)
-    html += make_html_table("5. EPS 라인메탈", {'gen': base_eps_gen+d_eps['line'], 'nan': base_eps_gen+d_eps['line']+1400, 'cert': base_eps_cert+d_eps['line']}, [100, 125, 150, 175, 200, 225, 250], gaps_eps)
-    html += make_html_table("6. EPS 정메탈", {'gen': base_eps_gen+d_eps['jung'], 'nan': base_eps_gen+d_eps['jung']+1400, 'cert': base_eps_cert+d_eps['jung']}, [100, 125, 150, 175, 200, 225, 250], gaps_eps)
+    html += make_html_table("1. EPS 벽체", {'gen': base_eps_gen, 'nan': base_eps_nan, 'cert': base_eps_cert}, thicks_eps, gaps_eps)
+    html += make_html_table("2. EPS 외벽체", {'gen': base_eps_gen+d_eps['ext'], 'nan': base_eps_nan+d_eps['ext'], 'cert': base_eps_cert+d_eps['ext']}, thicks_eps, gaps_eps)
+    html += make_html_table("3. EPS 지붕", {'gen': base_eps_gen+d_eps['roof'], 'nan': base_eps_nan+d_eps['roof'], 'cert': base_eps_cert+d_eps['roof']}, thicks_eps, gaps_eps)
+    html += make_html_table("4. EPS 징크", {'gen': base_eps_gen+d_eps['zinc'], 'nan': base_eps_nan+d_eps['zinc'], 'cert': base_eps_cert+d_eps['zinc']}, thicks_eps, gaps_eps)
+    html += make_html_table("5. EPS 라인메탈", {'gen': base_eps_gen+d_eps['line'], 'nan': base_eps_nan+d_eps['line'], 'cert': base_eps_cert+d_eps['line']}, [100, 125, 150, 175, 200, 225, 250], gaps_eps)
+    html += make_html_table("6. EPS 정메탈", {'gen': base_eps_gen+d_eps['jung'], 'nan': base_eps_nan+d_eps['jung'], 'cert': base_eps_cert+d_eps['jung']}, [100, 125, 150, 175, 200, 225, 250], gaps_eps)
     components.html(html, height=2000, scrolling=True)
 
 with tab_gw:
@@ -189,7 +191,7 @@ st.markdown("---")
 st.subheader("📌 공통 기준 및 별도 옵션")
 
 if st.sidebar.button("카톡용 텍스트 복사"):
-    share_txt = f"[우리 스틸 단가]\nEPS인증(50T): {base_eps_cert:,}\nGW벽체(50T): {base_gw_wall:,}\n우레탄벽체(50T): {base_ure_wall:,}"
+    share_txt = f"[우리 스틸 단가]\nEPS일반(50T): {base_eps_gen:,}\nGW벽체(50T): {base_gw_wall:,}\n우레탄벽체(50T): {base_ure_wall:,}"
     st.sidebar.code(share_txt)
 
 footer_html = """
