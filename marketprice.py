@@ -194,4 +194,114 @@ with tab_gw:
     html_content = style_block
     html_content += make_html_table("1. GW 벽체", {'48': base_gw, '64': base_gw+2000}, thicks_gw, gaps_gw, "GW")
     html_content += make_html_table("2. GW 외벽체", {'48': base_gw+diff_gw_ext, '64': base_gw+diff_gw_ext+2000}, thicks_gw, gaps_gw, "GW")
-    html_content += make_html_table("3. GW 지붕", {'48': base_gw+diff_gw_roof, '64': base_gw+diff
+    html_content += make_html_table("3. GW 지붕", {'48': base_gw+diff_gw_roof, '64': base_gw+diff_gw_roof+2000}, thicks_gw, gaps_gw, "GW")
+    html_content += make_html_table("4. GW 징크", {'48': base_gw+diff_gw_zinc, '64': base_gw+diff_gw_zinc+2000}, thicks_gw, gaps_gw, "GW")
+    html_content += make_html_table("5. GW 라인메탈", {'48': base_gw+diff_gw_line, '64': base_gw+diff_gw_line+2000}, thicks_gw, gaps_gw, "GW")
+    html_content += make_html_table("6. GW 정메탈", {'48': base_gw+diff_gw_jung, '64': base_gw+diff_gw_jung+2000}, thicks_gw, gaps_gw, "GW")
+    
+    components.html(html_content, height=2000, scrolling=True)
+
+
+# --- 3. URE 탭 ---
+with tab_ure:
+    st.subheader("우레탄 기준 단가 설정")
+    
+    col_sel, col_inp = st.columns([1, 2])
+    thicks_ur = [50, 75, 100, 125, 150]
+    
+    with col_sel:
+        target_t_ure = st.selectbox("기준 두께 선택 (URE)", thicks_ur, index=0)
+    with col_inp:
+        target_p_ure = st.number_input(f"URE 벽체 {target_t_ure}T 단가 입력", value=24500, step=100)
+
+    base_ure = calculate_base_price_from_target(target_p_ure, target_t_ure, thicks_ur, gap_ure_gen)
+
+    if target_t_ure != 50:
+        st.caption(f"💡 {target_t_ure}T가 {target_p_ure:,}원일 때, 50T 원가는 {base_ure:,}원으로 자동 계산됨")
+
+    with st.expander("🔧 품목별 추가금 설정 (벽체 대비)", expanded=False):
+        c1, c2, c3 = st.columns(3)
+        diff_ur_ext = c1.number_input("URE 외벽체 추가금", value=1000)
+        diff_ur_roof = c2.number_input("URE 지붕 추가금", value=2000)
+        diff_ur_zinc = c3.number_input("URE 징크 추가금", value=6000)
+        c4, c5 = st.columns(2)
+        diff_ur_line = c4.number_input("URE 라인메탈 추가금", value=11000)
+        diff_ur_jung = c5.number_input("URE 정메탈 추가금", value=21000)
+
+    gaps_ure = {'gen': gap_ure_gen, 'cert': gap_ure_cert}
+    
+    html_content = style_block
+    html_content += make_html_table("1. 우레탄 벽체", {'gen': base_ure, 'cert': base_ure+8000}, thicks_ur, gaps_ure, "URE")
+    html_content += make_html_table("2. 우레탄 외벽체", {'gen': base_ure+diff_ur_ext, 'cert': base_ure+diff_ur_ext+8000}, thicks_ur, gaps_ure, "URE")
+    html_content += make_html_table("3. 우레탄 지붕", {'gen': base_ure+diff_ur_roof, 'cert': base_ure+diff_ur_roof+8000}, thicks_ur, gaps_ure, "URE")
+    html_content += make_html_table("4. 우레탄 징크", {'gen': base_ure+diff_ur_zinc, 'cert': base_ure+diff_ur_zinc+8000}, thicks_ur, gaps_ure, "URE")
+    html_content += make_html_table("5. 우레탄 라인메탈", {'gen': base_ure+diff_ur_line, 'cert': base_ure+diff_ur_line+8000}, thicks_ur, gaps_ure, "URE")
+    html_content += make_html_table("6. 우레탄 정메탈", {'gen': base_ure+diff_ur_jung, 'cert': base_ure+diff_ur_jung+8000}, thicks_ur, gaps_ure, "URE")
+    
+    components.html(html_content, height=2000, scrolling=True)
+
+
+# ==========================================
+# [하단 고정] 공통 기준 & 별도 옵션
+# ==========================================
+st.markdown("---")
+st.subheader("📌 공통 기준 및 별도 옵션")
+
+share_txt = f"""[우리 스틸 기준 단가]
+EPS 벽체 50T: {base_eps:,}원
+GW 벽체 50T: {base_gw:,}원"""
+if st.sidebar.button("카톡용 텍스트 복사"):
+    st.sidebar.code(share_txt)
+
+footer_html = """
+<style>
+    .footer-container { display: flex; gap: 20px; flex-wrap: wrap; justify-content: center; font-family: sans-serif; color: white; }
+    .box { flex: 1; min-width: 350px; border: 1px solid #444; padding: 10px; background-color: #111; }
+    .box h4 { color: #D4AF37; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 5px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; text-align: center; }
+    th { background-color: #333; color: #D4AF37; border: 1px solid #555; padding: 6px; }
+    td { background-color: #1A1A1A; border: 1px solid #444; padding: 6px; }
+    .plus { color: #FF6B6B; font-weight: bold; }
+    .minus { color: #4dabf7; font-weight: bold; }
+</style>
+
+<div class="footer-container">
+    <div class="box">
+        <h4>1. 공통사항 및 내화인증</h4>
+        <table>
+            <tr><th colspan="2">기본 공통</th></tr>
+            <tr><td>보호필름</td><td class="plus">+300원</td></tr>
+            <tr><td>특이색상(오렌지/검정/노랑)</td><td class="plus">+500원</td></tr>
+            <tr><td>캐노피/행가 (50T)</td><td>20,500원</td></tr>
+            <tr><td>캐노피/행가 (75T)</td><td>21,900원</td></tr>
+        </table>
+        <br>
+        <table>
+            <tr><th colspan="5">내화인증 기준 (그라스울)</th></tr>
+            <tr><th>타입</th><th>두께</th><th>밀도</th><th>성능</th><th>비고</th></tr>
+            <tr><td>벽체</td><td>125T~</td><td>48K</td><td>1시간</td><td>무하지</td></tr>
+            <tr><td>외벽</td><td>100T~</td><td>48K</td><td>0.5시간</td><td>하지1700↓</td></tr>
+            <tr><td>지붕</td><td>184T~</td><td>48K</td><td>0.5시간</td><td>하지1200↓</td></tr>
+            <tr><td>징크</td><td>125T~</td><td>64K</td><td>1시간</td><td>하지1700↓</td></tr>
+        </table>
+    </div>
+
+    <div class="box">
+        <h4>2. 품목별 별도 옵션</h4>
+        <table>
+            <tr><th>구분</th><th>항목</th><th>금액</th></tr>
+            <tr><td>벽체</td><td>일면 유색</td><td class="plus">+500원</td></tr>
+            <tr><td rowspan="4">외벽체/지붕</td><td>유니스톤</td><td class="plus">+1,000원</td></tr>
+            <tr><td>리얼/코르텐/징크</td><td class="plus">+2,000원</td></tr>
+            <tr><td>0.6T 변경</td><td class="plus">+1,700원</td></tr>
+            <tr><td>0.8T 변경</td><td class="plus">+4,700원</td></tr>
+            <tr><td rowspan="2">징크</td><td>유니스톤</td><td class="minus">-500원 (공제)</td></tr>
+            <tr><td>일면 유색</td><td class="minus">-1,000원 (공제)</td></tr>
+            <tr><td rowspan="2">라인메탈</td><td>메지 간격</td><td>1000 고정</td></tr>
+            <tr><td>0.8T 변경</td><td class="plus">+3,400원</td></tr>
+            <tr><td>정메탈</td><td>측면/두걱 가공</td><td style="color:#D4AF37;">별도 견적</td></tr>
+        </table>
+    </div>
+</div>
+"""
+components.html(footer_html, height=800, scrolling=True)
