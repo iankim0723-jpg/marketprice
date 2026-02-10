@@ -21,32 +21,27 @@ st.markdown("""
 st.title("WOORI PRICE MASTER")
 
 # ==========================================
-# [공통 함수] 계산 및 표 생성
+# [공통 함수] 표 생성기
 # ==========================================
-def calculate_base_from_target(target, thick, thick_list, gap):
-    try:
-        idx = thick_list.index(thick)
-        return target - (idx * gap)
-    except:
-        return target
-
 def make_html_table(title, price_dict, thick_list, gap_dict, mat_type="EPS"):
     rows = ""
     for i, t in enumerate(thick_list):
         if mat_type == "EPS":
+            # EPS: 인증 / 일반 / 난연
             p_cert = price_dict['cert'] + (i * gap_dict['cert'])
             p_gen = price_dict['gen'] + (i * gap_dict['gen'])
             p_nan = price_dict['nan'] + (i * gap_dict['nan'])
             
-            # 인증은 75T 미만 표시 안 함
+            # 인증은 75T 이상부터 표시 (보통)
             str_cert = f"{p_cert:,}" if t >= 75 else "-"
-            # 일반 0.35T는 0.5T 대비 -4600원 가정
+            # 일반 0.35T는 0.5T 대비 -4600원 (가정)
             cols = f"<td>{p_gen-4600:,}</td> <td>{p_gen:,}</td> <td>{p_nan-1400:,}</td> <td>{p_nan:,}</td> <td style='color:#D4AF37; font-weight:bold;'>{str_cert}</td>"
             
         elif mat_type == "GW":
+            # GW: 48K / 64K / 내화
             p_48 = price_dict['48'] + (i * gap_dict['48'])
             p_64 = price_dict['64'] + (i * gap_dict['64'])
-            # 내화구조 (125T 이상)
+            
             if t >= 125:
                 f30, f60_48, f60_64 = f"{p_48+5000:,}", f"{p_48+6000:,}", f"{p_64+6000:,}"
             else:
@@ -54,6 +49,7 @@ def make_html_table(title, price_dict, thick_list, gap_dict, mat_type="EPS"):
             cols = f"<td>{p_48:,}</td> <td>{p_64:,}</td> <td>{f30}</td> <td>{f60_48}</td> <td>{f60_64}</td>"
 
         elif mat_type == "URE":
+            # URE: 일반 / 인증
             p_gen = price_dict['gen'] + (i * gap_dict['gen'])
             p_cert = price_dict['cert'] + (i * gap_dict['cert'])
             cols = f"<td>{p_gen:,}</td> <td>{p_cert:,}</td>"
@@ -80,18 +76,25 @@ style_block = """<style>
 
 
 # ==========================================
-# [★핵심★] 관리자 모드 vs 뷰어 모드 (변수 설정)
+# [사이드바] 관리자 설정 & 기본값 세팅
 # ==========================================
 with st.sidebar:
     st.header("🔒 관리자 접속")
-    admin_pw = st.text_input("비밀번호 (수정하려면 입력)", type="password")
-    is_admin = (admin_pw == "0723")
+    admin_pw = st.text_input("비밀번호", type="password")
+    is_admin = (admin_pw == "0723") # 비밀번호
 
     if is_admin:
-        st.success("✅ 관리자 모드 ON")
+        st.success("✅ 관리자 모드: 단가 수정 가능")
+        
         st.markdown("---")
-        st.subheader("인상폭(Gap) 설정")
-        # 관리자: 갭 수정 가능
+        st.subheader("1. 기준 단가 (50T 기준)")
+        # 관리자 입력창 (여기서 바꾸면 화면에 즉시 반영)
+        base_eps_cert = st.number_input("EPS 인증 50T", value=17800, step=100)
+        base_gw_wall = st.number_input("GW 벽체 50T (48K)", value=13800, step=100)
+        base_ure_wall = st.number_input("URE 벽체 50T", value=24500, step=100)
+        
+        st.markdown("---")
+        st.subheader("2. 두께별 인상폭(Gap)")
         gap_eps_gen = st.number_input("EPS 일반 Gap", value=800, step=100)
         gap_eps_nan = st.number_input("EPS 난연 Gap", value=1400, step=100)
         gap_eps_cert = st.number_input("EPS 인증 Gap", value=2500, step=100)
@@ -103,71 +106,41 @@ with st.sidebar:
         gap_ure_cert = st.number_input("우레탄 인증 Gap", value=5000, step=100)
         
     else:
-        # 뷰어(고객용): 갭 고정
+        # [고객 모드] ★★★★★ 여기서 고정 단가를 수정하세요 ★★★★★
+        base_eps_cert = 17800  # EPS 인증 50T 고정값
+        base_gw_wall = 13800   # GW 벽체 50T 고정값
+        base_ure_wall = 24500  # 우레탄 벽체 50T 고정값
+        # ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
+        
+        # Gap 고정값
         gap_eps_gen, gap_eps_nan, gap_eps_cert = 800, 1400, 2500
         gap_gw_48, gap_gw_64 = 2400, 3200
         gap_ure_gen, gap_ure_cert = 4000, 5000
 
 
-# 두께 리스트 정의
+# ==========================================
+# [데이터 계산] 품목별 자동 연동 (벽체 기준 +@)
+# ==========================================
+
+# 1. EPS 계산
+# 인증 50T 기준 -> 일반 50T는 -6300원 (가정)
+base_eps_gen = base_eps_cert - 6300 
+# 품목별 추가금 (벽체 대비)
+d_eps = {'ext': 2400, 'roof': 2900, 'zinc': 4500, 'line': 14700, 'jung': 24300}
+gaps_eps = {'gen': gap_eps_gen, 'nan': gap_eps_nan, 'cert': gap_eps_cert}
 thicks_eps = [50, 75, 100, 125, 150, 155, 175, 200, 225, 250, 260]
+
+# 2. GW 계산
+bgw = base_gw_wall
+d_gw = {'ext': 2500, 'roof': 2500, 'zinc': 4900, 'line': 6300, 'jung': 15100}
+gaps_gw = {'48': gap_gw_48, '64': gap_gw_64}
 thicks_gw = [50, 75, 100, 125, 138, 150, 184, 200, 220, 250]
+
+# 3. URE 계산
+bur = base_ure_wall
+d_ur = {'ext': 1000, 'roof': 2000, 'zinc': 6000, 'line': 11000, 'jung': 21000}
+gaps_ure = {'gen': gap_ure_gen, 'cert': gap_ure_cert}
 thicks_ur = [50, 75, 100, 125, 150]
-
-
-# ==========================================
-# [데이터 로직] 관리자 vs 뷰어 값 결정
-# ==========================================
-
-# 1. EPS 데이터
-if is_admin:
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("EPS 계산기 (관리자)")
-    adm_t_eps = st.sidebar.selectbox("EPS 기준두께", thicks_eps, index=2) # 100T
-    adm_p_eps = st.sidebar.number_input("EPS 인증 단가", value=22800, step=100)
-    # 역산
-    base_eps_cert = calculate_base_from_target(adm_p_eps, adm_t_eps, thicks_eps, gap_eps_cert)
-    base_eps_gen = base_eps_cert - 6300 # 일반은 인증보다 6300원 저렴하다고 가정
-else:
-    # ★★★★★ [여기서 EPS 고정 단가를 수정하세요] ★★★★★
-    base_eps_cert = 17800  # EPS 인증판넬 50T 가격
-    base_eps_gen = 11500   # EPS 일반판넬 50T 가격
-    # ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-
-# EPS 품목별 차액 (벽체 대비)
-diff_eps = {'ext': 2400, 'roof': 2900, 'zinc': 4500, 'line': 14700, 'jung': 24300}
-
-
-# 2. GW 데이터
-if is_admin:
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("GW 계산기 (관리자)")
-    adm_t_gw = st.sidebar.selectbox("GW 기준두께", thicks_gw, index=0)
-    adm_p_gw = st.sidebar.number_input("GW 벽체 단가", value=13800, step=100)
-    base_gw_wall = calculate_base_from_target(adm_p_gw, adm_t_gw, thicks_gw, gap_gw_48)
-else:
-    # ★★★★★ [여기서 그라스울 고정 단가를 수정하세요] ★★★★★
-    base_gw_wall = 13800   # GW 벽체 50T (48K) 가격
-    # ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-
-# GW 품목별 차액
-diff_gw = {'ext': 2500, 'roof': 2500, 'zinc': 4900, 'line': 6300, 'jung': 15100}
-
-
-# 3. URE 데이터
-if is_admin:
-    st.sidebar.markdown("---")
-    st.sidebar.subheader("우레탄 계산기 (관리자)")
-    adm_t_ur = st.sidebar.selectbox("URE 기준두께", thicks_ur, index=0)
-    adm_p_ur = st.sidebar.number_input("URE 벽체 단가", value=24500, step=100)
-    base_ur_wall = calculate_base_from_target(adm_p_ur, adm_t_ur, thicks_ur, gap_ure_gen)
-else:
-    # ★★★★★ [여기서 우레탄 고정 단가를 수정하세요] ★★★★★
-    base_ur_wall = 24500   # 우레탄 벽체 50T (일반) 가격
-    # ★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★
-
-# URE 품목별 차액
-diff_ur = {'ext': 1000, 'roof': 2000, 'zinc': 6000, 'line': 11000, 'jung': 21000}
 
 
 # ==========================================
@@ -175,59 +148,37 @@ diff_ur = {'ext': 1000, 'roof': 2000, 'zinc': 6000, 'line': 11000, 'jung': 21000
 # ==========================================
 tab_eps, tab_gw, tab_ure = st.tabs(["🟦 EPS 단가표", "🟨 그라스울 단가표", "🟥 우레탄 단가표"])
 
-# --- EPS 탭 ---
 with tab_eps:
-    if is_admin: st.info(f"관리자 모드: {adm_t_eps}T {adm_p_eps:,}원 기준 역산 중")
-    
-    gaps = {'gen': gap_eps_gen, 'nan': gap_eps_nan, 'cert': gap_eps_cert}
-    
+    if is_admin: st.info(f"관리자 모드: EPS 인증 50T {base_eps_cert:,}원 기준 계산 중")
     html = style_block
-    # 벽체
-    html += make_html_table("1. EPS 벽체", {'gen': base_eps_gen, 'nan': base_eps_gen+1400, 'cert': base_eps_cert}, thicks_eps, gaps)
-    # 외벽
-    html += make_html_table("2. EPS 외벽체", {'gen': base_eps_gen+diff_eps['ext'], 'nan': base_eps_gen+diff_eps['ext']+1400, 'cert': base_eps_cert+diff_eps['ext']}, thicks_eps, gaps)
-    # 지붕
-    html += make_html_table("3. EPS 지붕", {'gen': base_eps_gen+diff_eps['roof'], 'nan': base_eps_gen+diff_eps['roof']+1400, 'cert': base_eps_cert+diff_eps['roof']}, thicks_eps, gaps)
-    # 징크
-    html += make_html_table("4. EPS 징크", {'gen': base_eps_gen+diff_eps['zinc'], 'nan': base_eps_gen+diff_eps['zinc']+1400, 'cert': base_eps_cert+diff_eps['zinc']}, thicks_eps, gaps)
-    # 메탈
-    html += make_html_table("5. EPS 라인메탈", {'gen': base_eps_gen+diff_eps['line'], 'nan': base_eps_gen+diff_eps['line']+1400, 'cert': base_eps_cert+diff_eps['line']}, [100, 125, 150, 175, 200, 225, 250], gaps)
-    html += make_html_table("6. EPS 정메탈", {'gen': base_eps_gen+diff_eps['jung'], 'nan': base_eps_gen+diff_eps['jung']+1400, 'cert': base_eps_cert+diff_eps['jung']}, [100, 125, 150, 175, 200, 225, 250], gaps)
-    
+    html += make_html_table("1. EPS 벽체", {'gen': base_eps_gen, 'nan': base_eps_gen+1400, 'cert': base_eps_cert}, thicks_eps, gaps_eps)
+    html += make_html_table("2. EPS 외벽체", {'gen': base_eps_gen+d_eps['ext'], 'nan': base_eps_gen+d_eps['ext']+1400, 'cert': base_eps_cert+d_eps['ext']}, thicks_eps, gaps_eps)
+    html += make_html_table("3. EPS 지붕", {'gen': base_eps_gen+d_eps['roof'], 'nan': base_eps_gen+d_eps['roof']+1400, 'cert': base_eps_cert+d_eps['roof']}, thicks_eps, gaps_eps)
+    html += make_html_table("4. EPS 징크", {'gen': base_eps_gen+d_eps['zinc'], 'nan': base_eps_gen+d_eps['zinc']+1400, 'cert': base_eps_cert+d_eps['zinc']}, thicks_eps, gaps_eps)
+    html += make_html_table("5. EPS 라인메탈", {'gen': base_eps_gen+d_eps['line'], 'nan': base_eps_gen+d_eps['line']+1400, 'cert': base_eps_cert+d_eps['line']}, [100, 125, 150, 175, 200, 225, 250], gaps_eps)
+    html += make_html_table("6. EPS 정메탈", {'gen': base_eps_gen+d_eps['jung'], 'nan': base_eps_gen+d_eps['jung']+1400, 'cert': base_eps_cert+d_eps['jung']}, [100, 125, 150, 175, 200, 225, 250], gaps_eps)
     components.html(html, height=2000, scrolling=True)
 
-# --- GW 탭 ---
 with tab_gw:
-    if is_admin: st.info(f"관리자 모드: {adm_t_gw}T {adm_p_gw:,}원 기준 역산 중")
-    
-    gaps = {'48': gap_gw_48, '64': gap_gw_64}
-    bgw = base_gw_wall # 단축
-    
+    if is_admin: st.info(f"관리자 모드: GW 벽체 50T {base_gw_wall:,}원 기준 계산 중")
     html = style_block
-    html += make_html_table("1. GW 벽체", {'48': bgw, '64': bgw+2000}, thicks_gw, gaps, "GW")
-    html += make_html_table("2. GW 외벽체", {'48': bgw+diff_gw['ext'], '64': bgw+diff_gw['ext']+2000}, thicks_gw, gaps, "GW")
-    html += make_html_table("3. GW 지붕", {'48': bgw+diff_gw['roof'], '64': bgw+diff_gw['roof']+2000}, thicks_gw, gaps, "GW")
-    html += make_html_table("4. GW 징크", {'48': bgw+diff_gw['zinc'], '64': bgw+diff_gw['zinc']+2000}, thicks_gw, gaps, "GW")
-    html += make_html_table("5. GW 라인메탈", {'48': bgw+diff_gw['line'], '64': bgw+diff_gw['line']+2000}, thicks_gw, gaps, "GW")
-    html += make_html_table("6. GW 정메탈", {'48': bgw+diff_gw['jung'], '64': bgw+diff_gw['jung']+2000}, thicks_gw, gaps, "GW")
-    
+    html += make_html_table("1. GW 벽체", {'48': bgw, '64': bgw+2000}, thicks_gw, gaps_gw, "GW")
+    html += make_html_table("2. GW 외벽체", {'48': bgw+d_gw['ext'], '64': bgw+d_gw['ext']+2000}, thicks_gw, gaps_gw, "GW")
+    html += make_html_table("3. GW 지붕", {'48': bgw+d_gw['roof'], '64': bgw+d_gw['roof']+2000}, thicks_gw, gaps_gw, "GW")
+    html += make_html_table("4. GW 징크", {'48': bgw+d_gw['zinc'], '64': bgw+d_gw['zinc']+2000}, thicks_gw, gaps_gw, "GW")
+    html += make_html_table("5. GW 라인메탈", {'48': bgw+d_gw['line'], '64': bgw+d_gw['line']+2000}, thicks_gw, gaps_gw, "GW")
+    html += make_html_table("6. GW 정메탈", {'48': bgw+d_gw['jung'], '64': bgw+d_gw['jung']+2000}, thicks_gw, gaps_gw, "GW")
     components.html(html, height=2000, scrolling=True)
 
-# --- URE 탭 ---
 with tab_ure:
-    if is_admin: st.info(f"관리자 모드: {adm_t_ur}T {adm_p_ur:,}원 기준 역산 중")
-    
-    gaps = {'gen': gap_ure_gen, 'cert': gap_ure_cert}
-    bur = base_ur_wall
-    
+    if is_admin: st.info(f"관리자 모드: URE 벽체 50T {base_ure_wall:,}원 기준 계산 중")
     html = style_block
-    html += make_html_table("1. 우레탄 벽체", {'gen': bur, 'cert': bur+8000}, thicks_ur, gaps, "URE")
-    html += make_html_table("2. 우레탄 외벽체", {'gen': bur+diff_ur['ext'], 'cert': bur+diff_ur['ext']+8000}, thicks_ur, gaps, "URE")
-    html += make_html_table("3. 우레탄 지붕", {'gen': bur+diff_ur['roof'], 'cert': bur+diff_ur['roof']+8000}, thicks_ur, gaps, "URE")
-    html += make_html_table("4. 우레탄 징크", {'gen': bur+diff_ur['zinc'], 'cert': bur+diff_ur['zinc']+8000}, thicks_ur, gaps, "URE")
-    html += make_html_table("5. 우레탄 라인메탈", {'gen': bur+diff_ur['line'], 'cert': bur+diff_ur['line']+8000}, thicks_ur, gaps, "URE")
-    html += make_html_table("6. 우레탄 정메탈", {'gen': bur+diff_ur['jung'], 'cert': bur+diff_ur['jung']+8000}, thicks_ur, gaps, "URE")
-    
+    html += make_html_table("1. 우레탄 벽체", {'gen': bur, 'cert': bur+8000}, thicks_ur, gaps_ure, "URE")
+    html += make_html_table("2. 우레탄 외벽체", {'gen': bur+d_ur['ext'], 'cert': bur+d_ur['ext']+8000}, thicks_ur, gaps_ure, "URE")
+    html += make_html_table("3. 우레탄 지붕", {'gen': bur+d_ur['roof'], 'cert': bur+d_ur['roof']+8000}, thicks_ur, gaps_ure, "URE")
+    html += make_html_table("4. 우레탄 징크", {'gen': bur+d_ur['zinc'], 'cert': bur+d_ur['zinc']+8000}, thicks_ur, gaps_ure, "URE")
+    html += make_html_table("5. 우레탄 라인메탈", {'gen': bur+d_ur['line'], 'cert': bur+d_ur['line']+8000}, thicks_ur, gaps_ure, "URE")
+    html += make_html_table("6. 우레탄 정메탈", {'gen': bur+d_ur['jung'], 'cert': bur+d_ur['jung']+8000}, thicks_ur, gaps_ure, "URE")
     components.html(html, height=2000, scrolling=True)
 
 
@@ -238,7 +189,7 @@ st.markdown("---")
 st.subheader("📌 공통 기준 및 별도 옵션")
 
 if st.sidebar.button("카톡용 텍스트 복사"):
-    share_txt = f"[우리 스틸 단가]\nEPS인증(50T): {base_eps_cert:,}\nGW벽체(50T): {base_gw_wall:,}\n우레탄벽체(50T): {base_ur_wall:,}"
+    share_txt = f"[우리 스틸 단가]\nEPS인증(50T): {base_eps_cert:,}\nGW벽체(50T): {base_gw_wall:,}\n우레탄벽체(50T): {base_ure_wall:,}"
     st.sidebar.code(share_txt)
 
 footer_html = """
