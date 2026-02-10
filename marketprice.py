@@ -4,7 +4,7 @@ import streamlit.components.v1 as components
 # 1. 페이지 설정
 st.set_page_config(page_title="WOORI PRICE MASTER", layout="wide")
 
-# 2. 스타일 설정 (깨짐 방지)
+# 2. 스타일 설정
 st.markdown("""
     <style>
     .stApp { background-color: #000000; color: #FFFFFF; }
@@ -80,25 +80,29 @@ with st.sidebar:
         gap_ure_gen, gap_ure_cert = 4000, 5000
 
 # ==========================================
-# [데이터 계산 로직]
+# [데이터 계산 로직] - ★키값 오류 수정됨★
 # ==========================================
 # EPS (일반 50T 기준)
 base_eps_nan = base_eps_gen + 1400
 base_eps_cert = base_eps_gen + 6300
 d_eps = {'벽체':0, '외벽체':2400, '지붕':2900, '징크':4500, '라인메탈':14700, '정메탈':24300}
-gaps_eps = {'일반':gap_eps_gen, '난연':gap_eps_nan, '인증':gap_eps_cert}
+
+# ★ 수정된 부분: 키값을 함수와 일치시킴 (일반->gen, 난연->nan, 인증->cert)
+gaps_eps = {'gen':gap_eps_gen, 'nan':gap_eps_nan, 'cert':gap_eps_cert}
 thicks_eps = [50, 75, 100, 125, 150, 155, 175, 200, 225, 250, 260]
 
 # GW
 bgw = base_gw_wall
 d_gw = {'벽체':0, '외벽체':2500, '지붕':2500, '징크':4900, '라인메탈':6300, '정메탈':15100}
-gaps_gw = {'48K':gap_gw_48, '64K':gap_gw_64}
+# ★ 수정된 부분: (48K->48, 64K->64)
+gaps_gw = {'48':gap_gw_48, '64':gap_gw_64}
 thicks_gw = [50, 75, 100, 125, 138, 150, 184, 200, 220, 250]
 
 # URE
 bur = base_ure_wall
 d_ur = {'벽체':0, '외벽체':1000, '지붕':2000, '징크':6000, '라인메탈':11000, '정메탈':21000}
-gaps_ure = {'일반':gap_ure_gen, '인증':gap_ure_cert}
+# ★ 수정된 부분: (일반->gen, 인증->cert)
+gaps_ure = {'gen':gap_ure_gen, 'cert':gap_ure_cert}
 thicks_ur = [50, 75, 100, 125, 150]
 
 
@@ -121,28 +125,28 @@ with st.container():
         s_thick = c3.selectbox("3. 두께", thicks_ur)
         s_grade = c4.selectbox("4. 등급", ["인증", "일반"])
 
-    # 계산
+    # 계산 (빠른조회용 로직)
     final_price = 0
     idx = 0
     if s_mat == "EPS":
         idx = thicks_eps.index(s_thick)
         if s_grade == "인증":
             base = base_eps_cert + d_eps[s_type]
-            final_price = base + ((idx-1) * gaps_eps['인증']) if s_thick >= 75 else 0
+            final_price = base + ((idx-1) * gaps_eps['cert']) if s_thick >= 75 else 0
         elif s_grade == "난연":
             base = base_eps_nan + d_eps[s_type]
-            final_price = base + (idx * gaps_eps['난연'])
+            final_price = base + (idx * gaps_eps['nan'])
         else:
             base = base_eps_gen + d_eps[s_type]
-            final_price = base + (idx * gaps_eps['일반'])
+            final_price = base + (idx * gaps_eps['gen'])
     elif s_mat == "그라스울":
         idx = thicks_gw.index(s_thick)
         base = bgw + d_gw[s_type]
-        final_price = base + (idx * gaps_gw['48K']) if s_grade=="48K" else (base+2000) + (idx * gaps_gw['64K'])
+        final_price = base + (idx * gaps_gw['48']) if s_grade=="48K" else (base+2000) + (idx * gaps_gw['64'])
     elif s_mat == "우레탄":
         idx = thicks_ur.index(s_thick)
         base = bur + d_ur[s_type]
-        final_price = base + (idx * gaps_ure['일반']) if s_grade=="일반" else (base+8000) + (idx * gaps_ure['인증'])
+        final_price = base + (idx * gaps_ure['gen']) if s_grade=="일반" else (base+8000) + (idx * gaps_ure['cert'])
 
     # 결과 표시
     st.markdown(f"""
@@ -166,18 +170,21 @@ def make_html_table(title, p_dict, t_list, g_dict, m_type="EPS"):
     rows = ""
     for i, t in enumerate(t_list):
         if m_type == "EPS":
+            # 사전 키와 매칭: cert, gen, nan
             pc = p_dict['cert'] + (i * g_dict['cert'])
             pg = p_dict['gen'] + (i * g_dict['gen'])
             pn = p_dict['nan'] + (i * g_dict['nan'])
             sc = f"{pc:,}" if t >= 75 else "-"
             cols = f"<td>{pg-4600:,}</td><td>{pg:,}</td><td>{pn-1400:,}</td><td>{pn:,}</td><td style='color:#D4AF37;font-weight:bold;'>{sc}</td>"
         elif m_type == "GW":
+            # 사전 키와 매칭: 48, 64
             p48 = p_dict['48'] + (i * g_dict['48'])
             p64 = p_dict['64'] + (i * g_dict['64'])
             if t>=125: f30,f60a,f60b = f"{p48+5000:,}", f"{p48+6000:,}", f"{p64+6000:,}"
             else: f30,f60a,f60b = "-","-","-"
             cols = f"<td>{p48:,}</td><td>{p64:,}</td><td>{f30}</td><td>{f60a}</td><td>{f60b}</td>"
         elif m_type == "URE":
+            # 사전 키와 매칭: gen, cert
             pg = p_dict['gen'] + (i * g_dict['gen'])
             pc = p_dict['cert'] + (i * g_dict['cert'])
             cols = f"<td>{pg:,}</td><td>{pc:,}</td>"
