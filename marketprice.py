@@ -46,17 +46,12 @@ with st.sidebar:
 # [공통 함수] 기준가 역산 로직
 # ==========================================
 def calculate_base_price_from_target(target_price, target_thick, thick_list, gap_price):
-    """
-    사용자가 입력한 두께(target_thick)와 가격(target_price)을 통해
-    50T(Index 0)의 기준가를 역산해내는 함수
-    """
     try:
-        idx = thick_list.index(target_thick) # 선택한 두께가 몇 번째인지 확인
-        # 공식: 50T가격 = 입력가격 - (순서 * 갭)
+        idx = thick_list.index(target_thick)
         base_price = target_price - (idx * gap_price)
         return base_price
     except ValueError:
-        return target_price # 에러 시 그대로 반환
+        return target_price
 
 # ==========================================
 # [공통 함수] HTML 테이블 생성
@@ -66,15 +61,18 @@ def make_html_table(title, base_price_dict, thick_list, gap_dict, material_type=
     for i, t in enumerate(thick_list):
         cols = ""
         if material_type == "EPS":
+            # EPS 인증 가격이 메인
+            p_cert = base_price_dict['cert'] + (i * gap_dict['cert'])
+            # 일반/난연은 인증 가격에서 역산하거나 별도 갭 적용 (여기선 베이스 기준)
             p_gen05 = base_price_dict['gen'] + (i * gap_dict['gen'])
             p_gen35 = base_price_dict.get('gen35', p_gen05 - 4600)
             p_nan05 = base_price_dict['nan'] + (i * gap_dict['nan'])
             p_nan35 = p_nan05 - 1400
             
-            if t < 75: p_cert = "-"
-            else: p_cert = f"{base_price_dict['cert'] + ((i-1) * gap_dict['cert']):,}"
+            if t < 75: str_cert = "-" # 인증은 보통 75T부터
+            else: str_cert = f"{p_cert:,}"
 
-            cols = f"<td>{p_gen35:,}</td> <td>{p_gen05:,}</td> <td>{p_nan35:,}</td> <td>{p_nan05:,}</td> <td>{p_cert}</td>"
+            cols = f"<td>{p_gen35:,}</td> <td>{p_gen05:,}</td> <td>{p_nan35:,}</td> <td>{p_nan05:,}</td> <td style='color:#D4AF37; font-weight:bold;'>{str_cert}</td>"
             
         elif material_type == "GW":
             p_48 = base_price_dict['48'] + (i * gap_dict['48'])
@@ -95,7 +93,7 @@ def make_html_table(title, base_price_dict, thick_list, gap_dict, material_type=
 
     header = ""
     if material_type == "EPS":
-        header = """<tr><th rowspan="2">두께</th><th colspan="2">일반 (EPS)</th><th colspan="2">난연 (EPS)</th><th>인증</th></tr><tr class="sub-header"><th>0.35T</th><th>0.5T</th><th>0.35T</th><th>0.5T</th><th>0.5T</th></tr>"""
+        header = """<tr><th rowspan="2">두께</th><th colspan="2">일반 (EPS)</th><th colspan="2">난연 (EPS)</th><th>인증 (기본)</th></tr><tr class="sub-header"><th>0.35T</th><th>0.5T</th><th>0.35T</th><th>0.5T</th><th>0.5T</th></tr>"""
     elif material_type == "GW":
         header = """<tr><th rowspan="2">두께</th><th colspan="2">그라스울 (불연)</th><th colspan="3">그라스울 (내화)</th></tr><tr class="sub-header"><th>48K</th><th>64K</th><th>48K(30분)</th><th>48K(60분)</th><th>64K(60분)</th></tr>"""
     elif material_type == "URE":
@@ -121,25 +119,39 @@ tab_eps, tab_gw, tab_ure = st.tabs(["🟦 EPS 단가표", "🟨 그라스울 단
 
 # --- 1. EPS 탭 ---
 with tab_eps:
-    st.subheader("EPS 기준 단가 설정")
+    st.subheader("EPS 기준 단가 설정 (인증판넬 우선)")
     
-    # 1) 기준 두께와 가격 입력 (핵심 기능)
-    col_sel, col_inp = st.columns([1, 2])
+    # 1) 기준 두께와 가격 입력
+    col_sel, col_inp, col_type = st.columns([1, 1.5, 1])
     thicks_eps = [50, 75, 100, 125, 150, 155, 175, 200, 225, 250, 260]
     
     with col_sel:
-        target_t_eps = st.selectbox("기준 두께 선택", thicks_eps, index=0) # 기본 50T
+        target_t_eps = st.selectbox("기준 두께", thicks_eps, index=2) # 기본 100T (인증 많이 쓰는 두께)
     with col_inp:
-        target_p_eps = st.number_input(f"EPS 벽체 {target_t_eps}T 단가 입력", value=14000, step=100)
+        target_p_eps = st.number_input(f"EPS 벽체 {target_t_eps}T 단가", value=22800, step=100)
+    with col_type:
+        price_type = st.radio("가격 기준", ["인증 (기본)", "일반"], index=0, horizontal=True)
 
-    # 2) 50T 역산 (핵심 로직)
-    base_eps = calculate_base_price_from_target(target_p_eps, target_t_eps, thicks_eps, gap_eps_gen)
-    
-    if target_t_eps != 50:
-        st.caption(f"💡 {target_t_eps}T가 {target_p_eps:,}원일 때, 50T 원가는 {base_eps:,}원으로 자동 계산됨")
+    # 2) 50T 베이스 역산 (핵심)
+    if price_type == "인증 (기본)":
+        # 인증 가격에서 역산 -> 인증 50T 베이스 구함
+        base_eps_cert = calculate_base_price_from_target(target_p_eps, target_t_eps, thicks_eps, gap_eps_cert)
+        # 인증 50T에서 -6300원(예시 차액) 하면 일반 50T가 됨 (HP표 기준 100T 차액 고려)
+        # 사용자가 이 차액을 조절할 수 있게 아래 expander에 둠
+        cert_gen_diff = 6300 
+    else:
+        # 일반 가격에서 역산
+        base_eps_gen_input = calculate_base_price_from_target(target_p_eps, target_t_eps, thicks_eps, gap_eps_gen)
+        # 일반 -> 인증 변환
+        cert_gen_diff = 6300
+        base_eps_cert = base_eps_gen_input + cert_gen_diff
 
-    # 3) 품목별 차액 설정
-    with st.expander("🔧 품목별 추가금 설정 (벽체 대비)", expanded=False):
+    # 3) 품목별 차액 & 인증/일반 차액 설정
+    with st.expander("🔧 가격 상세 설정 (인증↔일반 차이 등)", expanded=False):
+        st.caption("인증판넬 가격을 입력했을 때, 일반판넬 가격을 얼마나 뺄지 설정합니다.")
+        manual_diff = st.number_input("인증 - 일반 차액 (50T 기준)", value=6300, step=100)
+        
+        st.caption("품목별 추가금 (벽체 대비)")
         c1, c2, c3 = st.columns(3)
         diff_eps_ext = c1.number_input("외벽체 추가금", value=2400)
         diff_eps_roof = c2.number_input("지붕 추가금", value=2900)
@@ -148,16 +160,29 @@ with tab_eps:
         diff_eps_line = c4.number_input("라인메탈 추가금", value=14700)
         diff_eps_jung = c5.number_input("정메탈 추가금", value=24300)
 
+    # 베이스 확정
+    if price_type == "인증 (기본)":
+        base_cert = base_eps_cert
+        base_gen = base_cert - manual_diff
+    else:
+        base_gen = base_eps_gen_input
+        base_cert = base_gen + manual_diff
+
     # 4) 출력
     gaps_eps = {'gen': gap_eps_gen, 'nan': gap_eps_nan, 'cert': gap_eps_cert}
     
     html_content = style_block
-    html_content += make_html_table("1. EPS 벽체", {'gen': base_eps, 'nan': base_eps+1400, 'cert': base_eps+8800}, thicks_eps, gaps_eps)
-    html_content += make_html_table("2. EPS 외벽체", {'gen': base_eps+diff_eps_ext, 'nan': base_eps+diff_eps_ext+1400, 'cert': base_eps+diff_eps_ext+8800}, thicks_eps, gaps_eps)
-    html_content += make_html_table("3. EPS 지붕", {'gen': base_eps+diff_eps_roof, 'nan': base_eps+diff_eps_roof+1400, 'cert': base_eps+diff_eps_roof+8800}, thicks_eps, gaps_eps)
-    html_content += make_html_table("4. EPS 징크", {'gen': base_eps+diff_eps_zinc, 'nan': base_eps+diff_eps_zinc+1400, 'cert': base_eps+diff_eps_zinc+8800}, thicks_eps, gaps_eps)
-    html_content += make_html_table("5. EPS 라인메탈", {'gen': base_eps+diff_eps_line, 'nan': base_eps+diff_eps_line+1400, 'cert': base_eps+diff_eps_line+8800}, [100, 125, 150, 175, 200, 225, 250], gaps_eps)
-    html_content += make_html_table("6. EPS 정메탈", {'gen': base_eps+diff_eps_jung, 'nan': base_eps+diff_eps_jung+1400, 'cert': base_eps+diff_eps_jung+8800}, [100, 125, 150, 175, 200, 225, 250], gaps_eps)
+    # 벽체
+    html_content += make_html_table("1. EPS 벽체", {'gen': base_gen, 'nan': base_gen+1400, 'cert': base_cert}, thicks_eps, gaps_eps)
+    # 외벽체
+    html_content += make_html_table("2. EPS 외벽체", {'gen': base_gen+diff_eps_ext, 'nan': base_gen+diff_eps_ext+1400, 'cert': base_cert+diff_eps_ext}, thicks_eps, gaps_eps)
+    # 지붕
+    html_content += make_html_table("3. EPS 지붕", {'gen': base_gen+diff_eps_roof, 'nan': base_gen+diff_eps_roof+1400, 'cert': base_cert+diff_eps_roof}, thicks_eps, gaps_eps)
+    # 징크
+    html_content += make_html_table("4. EPS 징크", {'gen': base_gen+diff_eps_zinc, 'nan': base_gen+diff_eps_zinc+1400, 'cert': base_cert+diff_eps_zinc}, thicks_eps, gaps_eps)
+    # 메탈
+    html_content += make_html_table("5. EPS 라인메탈", {'gen': base_gen+diff_eps_line, 'nan': base_gen+diff_eps_line+1400, 'cert': base_cert+diff_eps_line}, [100, 125, 150, 175, 200, 225, 250], gaps_eps)
+    html_content += make_html_table("6. EPS 정메탈", {'gen': base_gen+diff_eps_jung, 'nan': base_gen+diff_eps_jung+1400, 'cert': base_cert+diff_eps_jung}, [100, 125, 150, 175, 200, 225, 250], gaps_eps)
 
     components.html(html_content, height=2000, scrolling=True)
 
@@ -165,22 +190,17 @@ with tab_eps:
 # --- 2. GW 탭 ---
 with tab_gw:
     st.subheader("그라스울 기준 단가 설정")
-    
     col_sel, col_inp = st.columns([1, 2])
     thicks_gw = [50, 75, 100, 125, 138, 150, 184, 200, 220, 250]
     
     with col_sel:
-        target_t_gw = st.selectbox("기준 두께 선택 (GW)", thicks_gw, index=0)
+        target_t_gw = st.selectbox("기준 두께 (GW)", thicks_gw, index=0)
     with col_inp:
-        # 기본값 16,300 (지붕 220T 35500원 역산값 - 벽체 기준 추정)
-        target_p_gw = st.number_input(f"GW 벽체 {target_t_gw}T 단가 입력", value=13800, step=100)
+        target_p_gw = st.number_input(f"GW 벽체 {target_t_gw}T 단가", value=13800, step=100)
 
     base_gw = calculate_base_price_from_target(target_p_gw, target_t_gw, thicks_gw, gap_gw_48)
 
-    if target_t_gw != 50:
-        st.caption(f"💡 {target_t_gw}T가 {target_p_gw:,}원일 때, 50T 원가는 {base_gw:,}원으로 자동 계산됨")
-
-    with st.expander("🔧 품목별 추가금 설정 (벽체 대비)", expanded=False):
+    with st.expander("🔧 품목별 추가금 설정", expanded=False):
         c1, c2, c3 = st.columns(3)
         diff_gw_ext = c1.number_input("GW 외벽체 추가금", value=2500)
         diff_gw_roof = c2.number_input("GW 지붕 추가금", value=2500)
@@ -205,21 +225,17 @@ with tab_gw:
 # --- 3. URE 탭 ---
 with tab_ure:
     st.subheader("우레탄 기준 단가 설정")
-    
     col_sel, col_inp = st.columns([1, 2])
     thicks_ur = [50, 75, 100, 125, 150]
     
     with col_sel:
-        target_t_ure = st.selectbox("기준 두께 선택 (URE)", thicks_ur, index=0)
+        target_t_ure = st.selectbox("기준 두께 (URE)", thicks_ur, index=0)
     with col_inp:
-        target_p_ure = st.number_input(f"URE 벽체 {target_t_ure}T 단가 입력", value=24500, step=100)
+        target_p_ure = st.number_input(f"URE 벽체 {target_t_ure}T 단가", value=24500, step=100)
 
     base_ure = calculate_base_price_from_target(target_p_ure, target_t_ure, thicks_ur, gap_ure_gen)
 
-    if target_t_ure != 50:
-        st.caption(f"💡 {target_t_ure}T가 {target_p_ure:,}원일 때, 50T 원가는 {base_ure:,}원으로 자동 계산됨")
-
-    with st.expander("🔧 품목별 추가금 설정 (벽체 대비)", expanded=False):
+    with st.expander("🔧 품목별 추가금 설정", expanded=False):
         c1, c2, c3 = st.columns(3)
         diff_ur_ext = c1.number_input("URE 외벽체 추가금", value=1000)
         diff_ur_roof = c2.number_input("URE 지붕 추가금", value=2000)
@@ -248,8 +264,8 @@ st.markdown("---")
 st.subheader("📌 공통 기준 및 별도 옵션")
 
 share_txt = f"""[우리 스틸 기준 단가]
-EPS 벽체 50T: {base_eps:,}원
-GW 벽체 50T: {base_gw:,}원"""
+EPS 인증: {base_cert:,}원 기준
+GW 48K: {base_gw:,}원 기준"""
 if st.sidebar.button("카톡용 텍스트 복사"):
     st.sidebar.code(share_txt)
 
