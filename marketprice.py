@@ -37,9 +37,26 @@ st.markdown("""
     .header-box { text-align: center; margin-bottom: 20px; border-bottom: 1px solid #444; padding-bottom: 20px; }
     .phone { font-size: 2.2rem; font-weight: bold; color: #D4AF37; margin-bottom: 5px; }
     .sub-info { font-size: 1.1rem; color: #FF4B4B; font-weight: bold; }
-    .notice { background-color: #3d0c0c; border: 1px solid #FF4B4B; border-radius: 5px; padding: 10px; text-align: center; color: #FF4B4B; font-weight: bold; }
+    .notice { background-color: #3d0c0c; border: 1px solid #FF4B4B; border-radius: 5px; padding: 10px; text-align: center; color: #FF4B4B; font-weight: bold; margin-bottom: 20px; }
     .result-box { background-color: #222; border: 2px solid #D4AF37; border-radius: 10px; padding: 15px; text-align: center; margin-top: 10px; }
     .result-price { font-size: 2rem; font-weight: bold; color: #FF4B4B; }
+    
+    /* 링크 버튼 스타일 */
+    .link-btn-container { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+    .link-btn {
+        flex: 1;
+        background-color: #1A1A1A;
+        border: 1px solid #D4AF37;
+        color: #D4AF37;
+        padding: 15px;
+        text-align: center;
+        text-decoration: none;
+        font-weight: bold;
+        border-radius: 5px;
+        font-size: 1.1rem;
+        transition: 0.3s;
+    }
+    .link-btn:hover { background-color: #D4AF37; color: black; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -51,6 +68,16 @@ st.markdown("""
     <div class="header-box">
         <div class="phone">📞 상담문의 T. 1577-8790</div>
         <div class="sub-info">※ 운반비 별도 / 부가세 별도</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ==========================================
+# [바로가기 버튼] 홈페이지 & 발주서
+# ==========================================
+st.markdown("""
+    <div class="link-btn-container">
+        <a href="http://www.wstpanel.co.kr/" target="_blank" class="link-btn">🏠 당사 홈페이지 방문</a>
+        <a href="#" target="_blank" class="link-btn">📝 모바일 발주서 작성</a>
     </div>
     <div class="notice">📢 [필독] 견적 산출 시, 화면 최하단의 '별도 옵션표'를 반드시 확인해 주세요!</div>
     """, unsafe_allow_html=True)
