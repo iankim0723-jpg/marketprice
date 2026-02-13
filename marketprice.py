@@ -82,7 +82,7 @@ st.markdown(f"""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# [사이드바] 관리자 설정
+# [사이드바] 관리자 설정 (매입가 + 마진)
 # ==========================================
 with st.sidebar:
     st.header("🔒 관리자 접속")
@@ -90,37 +90,33 @@ with st.sidebar:
     is_admin = (admin_pw == "0723")
 
     if is_admin:
-        st.success("✅ 관리자 모드")
+        st.success("✅ 관리자 모드: 매입가 입력")
         st.markdown("---")
         st.metric(label="📊 누적 방문자 수", value=f"{total_visitors}명")
         
-        # 1. 마진 설정
+        # [★핵심] 마진 설정
         st.markdown("---")
-        st.subheader("💰 마진 (이윤) 설정")
-        margin_per_unit = st.number_input("추가 마진 (+원)", value=1000, step=100, help="매입가에 이 금액을 더해서 보여줍니다.")
+        st.subheader("💰 내 마진 (이윤) 설정")
+        margin_per_unit = st.number_input("전 품목 공통 마진 (+원)", value=1000, step=100, help="OEM 매입가에 이 금액을 더해서 판매가를 만듭니다.")
         
-        # 2. 그림1 (그라스울)
         st.markdown("---")
-        st.subheader("📑 [그림1] 그라스울 매입가")
-        cost_gw_48 = st.number_input("GW 48K 50T 매입원가", value=0, step=100)
-        cost_gw_64 = st.number_input("GW 64K 50T 매입원가", value=0, step=100)
+        st.subheader("1. EPS 매입원가 (50T 기준)")
+        cost_eps_gen_35 = st.number_input("EPS 일반 50T (0.35T)", value=0, step=100)
+        cost_eps_nan_50 = st.number_input("EPS 난연 50T (0.5T)", value=0, step=100)
+        cost_eps_cert_50 = st.number_input("EPS 인증 50T (0.5T)", value=0, step=100)
         
-        # 3. 그림2 (EPS)
         st.markdown("---")
-        st.subheader("📑 [그림2] EPS 매입가")
-        cost_eps_gen_35 = st.number_input("EPS 일반 50T(0.35T) 매입원가", value=0, step=100)
-        cost_eps_nan_50 = st.number_input("EPS 난연 50T(0.5T) 매입원가", value=0, step=100)
-        cost_eps_cert_50 = st.number_input("EPS 인증 50T(0.5T) 매입원가", value=0, step=100)
+        st.subheader("2. 그라스울 매입원가 (50T 기준)")
+        cost_gw_48 = st.number_input("GW 48K 50T", value=0, step=100)
+        cost_gw_64 = st.number_input("GW 64K 50T", value=0, step=100)
         
-        # 4. 우레탄
         st.markdown("---")
-        st.subheader("📑 우레탄 매입가")
-        cost_ure_gen = st.number_input("우레탄 일반 50T 매입원가", value=0, step=100)
-        cost_ure_cert = st.number_input("우레탄 인증 50T 매입원가", value=0, step=100)
+        st.subheader("3. 우레탄 매입원가 (50T 기준)")
+        cost_ure_gen = st.number_input("우레탄 일반 50T", value=0, step=100)
+        cost_ure_cert = st.number_input("우레탄 인증 50T", value=0, step=100)
         
-        # 5. Gap 설정
         st.markdown("---")
-        st.subheader("⚙️ 두께별 인상폭 (Gap)")
+        st.subheader("4. 두께별 매입 인상폭(Gap)")
         gap_eps_gen = st.number_input("EPS 일반 Gap", value=800, step=100)
         gap_eps_nan = st.number_input("EPS 난연 Gap", value=1400, step=100)
         gap_eps_cert = st.number_input("EPS 인증 Gap", value=2500, step=100)
@@ -131,19 +127,20 @@ with st.sidebar:
         gap_ure_gen = st.number_input("우레탄 일반 Gap", value=4000, step=100)
         gap_ure_cert = st.number_input("우레탄 인증 Gap", value=5000, step=100)
     else:
-        # [고객용: 기본값은 0원이지만, 실제로는 관리자가 세팅한 값이 보여야 함]
-        # 편의상 예시 가격을 넣어둡니다. (관리자가 수정하면 그 값으로 즉시 바뀝니다)
-        margin_per_unit = 1000
+        # [고객용 기본값 - 0원 처리 또는 예시값]
+        # 실제로는 관리자가 입력한 값이 유지되어야 하지만, 여기선 데모이므로 0원으로 둡니다.
+        # 관리자 비밀번호를 입력하고 값을 세팅해야 표가 보입니다.
+        margin_per_unit = 0
         
-        cost_gw_48 = 13800
-        cost_gw_64 = 15800 
+        cost_eps_gen_35 = 0
+        cost_eps_nan_50 = 0
+        cost_eps_cert_50 = 0
         
-        cost_eps_gen_35 = 6900
-        cost_eps_nan_50 = 12900
-        cost_eps_cert_50 = 17800
+        cost_gw_48 = 0
+        cost_gw_64 = 0 
         
-        cost_ure_gen = 24500
-        cost_ure_cert = 32500
+        cost_ure_gen = 0
+        cost_ure_cert = 0
         
         gap_eps_gen, gap_eps_nan, gap_eps_cert = 800, 1400, 2500
         gap_gw_48, gap_gw_64 = 2400, 3200
@@ -176,7 +173,7 @@ with st.container():
     
     if s_mat == "EPS": 
         s_thick = c3.selectbox("3. 두께", thicks_eps)
-        s_grade = c4.selectbox("4. 등급", ["인증", "난연", "일반"])
+        s_grade = c4.selectbox("4. 등급", ["인증(0.5T)", "난연(0.5T)", "일반(0.35T)"])
     elif s_mat == "그라스울": 
         s_thick = c3.selectbox("3. 두께", thicks_gw)
         s_grade = c4.selectbox("4. 밀도", ["48K", "64K"])
@@ -190,15 +187,19 @@ with st.container():
     # [계산] 매입가 기준
     if s_mat == "EPS":
         idx = thicks_eps.index(s_thick)
-        if s_grade == "인증":
+        if "인증" in s_grade:
             base = cost_eps_cert_50 + d_eps[s_type]
             final_price = base + (idx * gaps_eps['cert']) if s_thick >= 75 else 0
-        elif s_grade == "난연":
+        elif "난연" in s_grade:
             base = cost_eps_nan_50 + d_eps[s_type]
             final_price = base + (idx * gaps_eps['nan'])
-        else:
-            base = (cost_eps_gen_35 + 4600) + d_eps[s_type] 
-            final_price = base + (idx * gaps_eps['gen'])
+        else: # 일반
+            # 일반 0.35T 기준 (50T는 +4600인데 여기선 0.35T 베이스로 계산)
+            # 여기서는 '일반 0.35T' 선택시 바로 그 값을 씀
+            # 단, 두께 갭은 50T 기준으로 되어 있으므로 보정 필요
+            # 50T일 때: cost_eps_gen_35 + 4600
+            base_50 = cost_eps_gen_35 + 4600 + d_eps[s_type]
+            final_price = base_50 + (idx * gaps_eps['gen'])
 
     elif s_mat == "그라스울":
         idx = thicks_gw.index(s_thick)
@@ -224,7 +225,7 @@ with st.container():
 
     st.markdown(f"""
     <div class="result-box">
-        <span style="color:#aaa;">선택하신 사양의 단가는</span><br>
+        <span style="color:#aaa;">선택하신 사양의 판매가는</span><br>
         <span class="result-price">{final_price:,}원</span> <span style="color:white">입니다.</span>
     </div>
     """, unsafe_allow_html=True)
@@ -243,10 +244,18 @@ def make_html_table(title, p_dict, t_list, g_dict, m_type="EPS", no_35t=False, m
     for i, t in enumerate(t_list):
         if m_type == "EPS":
             # 매입가 계산
+            # p_dict에는 50T 기준 매입가가 들어옴 (일반은 0.35T 기준)
+            
+            # 일반: 0.35T 기준값(gen_35) + 갭
+            # 주의: i=0(50T)일 때, 일반 0.35T는 gen_35 값이어야 함.
+            # 50T(0.5T)는 gen_35 + 4600원이라고 가정.
+            
             pg35_buy = p_dict['gen_35'] + (i * g_dict['gen'])
             pg50_buy = pg35_buy + 4600
+            
             pn50_buy = p_dict['nan_50'] + (i * g_dict['nan'])
             pn35_buy = pn50_buy - 1400
+            
             pc50_buy = p_dict['cert_50'] + (i * g_dict['cert'])
             
             # 판매가(마진추가)
@@ -311,7 +320,7 @@ p_eps_base = {
 }
 
 with tab_eps:
-    if is_admin: st.info(f"관리자: 매입가 기반 + 마진 {margin_per_unit:,}원 적용 완료")
+    if is_admin: st.info(f"관리자: OEM 매입가 + 마진 {margin_per_unit:,}원 적용 완료")
     h = style_t
     
     h += make_html_table("1. EPS 벽체", p_eps_base, thicks_eps, gaps_eps, no_35t=False, margin=margin_per_unit)
@@ -354,7 +363,7 @@ with tab_eps:
     components.html(h, height=2000, scrolling=True)
 
 with tab_gw:
-    if is_admin: st.info(f"관리자: 매입가 기반 + 마진 {margin_per_unit:,}원 적용 완료")
+    if is_admin: st.info(f"관리자: OEM 매입가 + 마진 {margin_per_unit:,}원 적용 완료")
     h = style_t
     h += make_html_table("1. GW 벽체", {'48':cost_gw_48, '64':cost_gw_64}, thicks_gw, gaps_gw, "GW", margin=margin_per_unit)
     h += make_html_table("2. GW 외벽체", {'48':cost_gw_48+d_gw['외벽체'], '64':cost_gw_64+d_gw['외벽체']}, thicks_gw, gaps_gw, "GW", margin=margin_per_unit)
@@ -365,7 +374,7 @@ with tab_gw:
     components.html(h, height=2000, scrolling=True)
 
 with tab_ure:
-    if is_admin: st.info(f"관리자: 매입가 기반 + 마진 {margin_per_unit:,}원 적용 완료")
+    if is_admin: st.info(f"관리자: OEM 매입가 + 마진 {margin_per_unit:,}원 적용 완료")
     h = style_t
     h += make_html_table("1. 우레탄 벽체", {'gen':cost_ure_gen, 'cert':cost_ure_cert}, thicks_ur, gaps_ure, "URE", margin=margin_per_unit)
     h += make_html_table("2. 우레탄 외벽체", {'gen':cost_ure_gen+d_ur['외벽체'], 'cert':cost_ure_cert+d_ur['외벽체']}, thicks_ur, gaps_ure, "URE", margin=margin_per_unit)
