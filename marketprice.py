@@ -41,7 +41,6 @@ st.markdown("""
     .result-box { background-color: #222; border: 2px solid #D4AF37; border-radius: 10px; padding: 15px; text-align: center; margin-top: 10px; }
     .result-price { font-size: 2rem; font-weight: bold; color: #FF4B4B; }
     
-    /* 링크 버튼 스타일 */
     .link-btn-container { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
     .link-btn {
         flex: 1;
@@ -61,7 +60,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # ==========================================
-# [상단] 배너
+# [상단] 배너 & 버튼
 # ==========================================
 st.title("WOORI PRICE MASTER")
 st.markdown("""
@@ -71,19 +70,19 @@ st.markdown("""
     </div>
     """, unsafe_allow_html=True)
 
-# ==========================================
-# [바로가기 버튼] 홈페이지 & 발주서
-# ==========================================
-st.markdown("""
+link_homepage = "http://www.wstpanel.co.kr/"
+link_order_form = "#" 
+
+st.markdown(f"""
     <div class="link-btn-container">
-        <a href="http://www.wstpanel.co.kr/" target="_blank" class="link-btn">🏠 당사 홈페이지 방문</a>
-        <a href="#" target="_blank" class="link-btn">📝 모바일 발주서 작성</a>
+        <a href="{link_homepage}" target="_blank" class="link-btn">🏠 당사 홈페이지 방문</a>
+        <a href="{link_order_form}" target="_blank" class="link-btn">📝 모바일 발주서 작성</a>
     </div>
     <div class="notice">📢 [필독] 견적 산출 시, 화면 최하단의 '별도 옵션표'를 반드시 확인해 주세요!</div>
     """, unsafe_allow_html=True)
 
 # ==========================================
-# [사이드바] 관리자 & 데이터 설정
+# [사이드바] 관리자 설정 (기준단가 + 마진)
 # ==========================================
 with st.sidebar:
     st.header("🔒 관리자 접속")
@@ -94,15 +93,30 @@ with st.sidebar:
         st.success("✅ 관리자 모드")
         st.markdown("---")
         st.metric(label="📊 누적 방문자 수", value=f"{total_visitors}명")
-        st.markdown("---")
         
-        st.subheader("1. 기준 단가 (50T)")
-        base_eps_gen = st.number_input("EPS 일반 50T", value=11500, step=100)
-        base_gw_wall = st.number_input("GW 벽체 50T", value=13800, step=100)
-        base_ure_wall = st.number_input("URE 벽체 50T", value=24500, step=100)
+        # [★신규] 마진(이윤) 입력
+        st.markdown("---")
+        st.subheader("💰 마진 설정 (전체 적용)")
+        margin_per_unit = st.number_input("추가 마진 (원)", value=0, step=100, help="입력한 금액만큼 모든 단가가 상승합니다.")
         
         st.markdown("---")
-        st.subheader("2. 인상폭(Gap)")
+        st.subheader("1. EPS 기준 단가 (50T)")
+        base_eps_gen_35 = st.number_input("EPS 일반 50T (0.35T)", value=6900, step=100)
+        base_eps_nan_50 = st.number_input("EPS 난연 50T (0.5T)", value=12900, step=100)
+        base_eps_cert_50 = st.number_input("EPS 인증 50T (0.5T)", value=17800, step=100)
+        
+        st.markdown("---")
+        st.subheader("2. 그라스울 기준 단가 (50T)")
+        base_gw_48 = st.number_input("GW 48K 50T", value=13800, step=100)
+        base_gw_64 = st.number_input("GW 64K 50T", value=15800, step=100)
+        
+        st.markdown("---")
+        st.subheader("3. 우레탄 기준 단가 (50T)")
+        base_ure_gen = st.number_input("우레탄 일반 50T", value=24500, step=100)
+        base_ure_cert = st.number_input("우레탄 인증 50T", value=32500, step=100)
+        
+        st.markdown("---")
+        st.subheader("4. 인상폭(Gap)")
         gap_eps_gen = st.number_input("EPS 일반 Gap", value=800, step=100)
         gap_eps_nan = st.number_input("EPS 난연 Gap", value=1400, step=100)
         gap_eps_cert = st.number_input("EPS 인증 Gap", value=2500, step=100)
@@ -113,10 +127,21 @@ with st.sidebar:
         gap_ure_gen = st.number_input("우레탄 일반 Gap", value=4000, step=100)
         gap_ure_cert = st.number_input("우레탄 인증 Gap", value=5000, step=100)
     else:
-        # [고객용 고정값]
-        base_eps_gen = 11500
-        base_gw_wall = 13800
-        base_ure_wall = 24500
+        # [고객용 기본값]
+        margin_per_unit = 0 # 고객은 마진 수정 불가 (관리자가 세팅한 값은 코드 수정 필요 없이 세션이나 DB저장이 필요하지만, 여기선 기본값 0으로 두고 관리자 접속시에만 반영되는 구조)
+        # *실제 운영시엔 관리자가 값을 바꾸면 서버에 저장되어야 하지만, 
+        #  Streamlit 특성상 코드를 수정하지 않으면 리셋됩니다.
+        #  일단 기본값으로 세팅합니다.*
+        
+        base_eps_gen_35 = 6900
+        base_eps_nan_50 = 12900
+        base_eps_cert_50 = 17800
+        
+        base_gw_48 = 13800
+        base_gw_64 = 15800 
+        
+        base_ure_gen = 24500
+        base_ure_cert = 32500
         
         gap_eps_gen, gap_eps_nan, gap_eps_cert = 800, 1400, 2500
         gap_gw_48, gap_gw_64 = 2400, 3200
@@ -125,21 +150,17 @@ with st.sidebar:
 # ==========================================
 # [데이터 계산 로직]
 # ==========================================
-# EPS
-base_eps_nan = base_eps_gen + 1400
-base_eps_cert = base_eps_gen + 6300
+# EPS 품목별 차액
 d_eps = {'벽체':0, '외벽체':2400, '지붕':2900, '징크':4500, '라인메탈':14700, '정메탈':24300}
 gaps_eps = {'gen':gap_eps_gen, 'nan':gap_eps_nan, 'cert':gap_eps_cert}
 thicks_eps = [50, 75, 100, 125, 150, 155, 175, 200, 225, 250, 260]
 
-# GW
-bgw = base_gw_wall
+# GW 품목별 차액
 d_gw = {'벽체':0, '외벽체':2500, '지붕':2500, '징크':4900, '라인메탈':6300, '정메탈':15100}
 gaps_gw = {'48':gap_gw_48, '64':gap_gw_64}
 thicks_gw = [50, 75, 100, 125, 138, 150, 184, 200, 220, 250]
 
-# URE
-bur = base_ure_wall
+# URE 품목별 차액
 d_ur = {'벽체':0, '외벽체':1000, '지붕':2000, '징크':6000, '라인메탈':11000, '정메탈':21000}
 gaps_ure = {'gen':gap_ure_gen, 'cert':gap_ure_cert}
 thicks_ur = [50, 75, 100, 125, 150]
@@ -166,25 +187,41 @@ with st.container():
 
     final_price = 0
     idx = 0
+    
+    # [계산] 기준단가 + 마진 적용
     if s_mat == "EPS":
         idx = thicks_eps.index(s_thick)
         if s_grade == "인증":
-            base = base_eps_cert + d_eps[s_type]
-            final_price = base + ((idx-1) * gaps_eps['cert']) if s_thick >= 75 else 0
+            base = base_eps_cert_50 + d_eps[s_type]
+            final_price = base + (idx * gaps_eps['cert']) if s_thick >= 75 else 0
         elif s_grade == "난연":
-            base = base_eps_nan + d_eps[s_type]
+            base = base_eps_nan_50 + d_eps[s_type]
             final_price = base + (idx * gaps_eps['nan'])
         else:
-            base = base_eps_gen + d_eps[s_type]
+            base = (base_eps_gen_35 + 4600) + d_eps[s_type] 
             final_price = base + (idx * gaps_eps['gen'])
+
     elif s_mat == "그라스울":
         idx = thicks_gw.index(s_thick)
-        base = bgw + d_gw[s_type]
-        final_price = base + (idx * gaps_gw['48']) if s_grade=="48K" else (base+2000) + (idx * gaps_gw['64'])
+        if s_grade == "48K":
+            base = base_gw_48 + d_gw[s_type]
+            final_price = base + (idx * gaps_gw['48'])
+        else: 
+            base = base_gw_64 + d_gw[s_type]
+            final_price = base + (idx * gaps_gw['64'])
+
     elif s_mat == "우레탄":
         idx = thicks_ur.index(s_thick)
-        base = bur + d_ur[s_type]
-        final_price = base + (idx * gaps_ure['gen']) if s_grade=="일반" else (base+8000) + (idx * gaps_ure['cert'])
+        if s_grade == "일반":
+            base = base_ure_gen + d_ur[s_type]
+            final_price = base + (idx * gaps_ure['gen'])
+        else: 
+            base = base_ure_cert + d_ur[s_type]
+            final_price = base + (idx * gaps_ure['cert'])
+    
+    # [★마진 추가]
+    if final_price > 0:
+        final_price += margin_per_unit
 
     st.markdown(f"""
     <div class="result-box">
@@ -200,32 +237,55 @@ st.markdown("---")
 
 
 # ==========================================
-# [공통 함수] 테이블 생성 (0.35T 제거 로직)
+# [공통 함수] 테이블 생성 (마진 반영)
 # ==========================================
-def make_html_table(title, p_dict, t_list, g_dict, m_type="EPS", no_35t=False):
+def make_html_table(title, p_dict, t_list, g_dict, m_type="EPS", no_35t=False, margin=0):
     rows = ""
     for i, t in enumerate(t_list):
         if m_type == "EPS":
-            pc = p_dict['cert'] + (i * g_dict['cert'])
-            pg = p_dict['gen'] + (i * g_dict['gen'])
-            pn = p_dict['nan'] + (i * g_dict['nan'])
-            sc = f"{pc:,}" if t >= 75 else "-"
+            # 기본 계산
+            pg35 = p_dict['gen_35'] + (i * g_dict['gen'])
+            pg50 = pg35 + 4600
+            pn50 = p_dict['nan_50'] + (i * g_dict['nan'])
+            pn35 = pn50 - 1400
+            pc50 = p_dict['cert_50'] + (i * g_dict['cert'])
+            
+            # [★마진 추가]
+            pg35 += margin
+            pg50 += margin
+            pn50 += margin
+            pn35 += margin
+            pc50 += margin
+            
+            sc = f"{pc50:,}" if t >= 75 else "-"
             
             if no_35t:
-                cols = f"<td>{pg:,}</td><td>{pn:,}</td><td style='color:#D4AF37;font-weight:bold;'>{sc}</td>"
+                cols = f"<td>{pg50:,}</td><td>{pn50:,}</td><td style='color:#D4AF37;font-weight:bold;'>{sc}</td>"
             else:
-                cols = f"<td>{pg-4600:,}</td><td>{pg:,}</td><td>{pn-1400:,}</td><td>{pn:,}</td><td style='color:#D4AF37;font-weight:bold;'>{sc}</td>"
+                cols = f"<td>{pg35:,}</td><td>{pg50:,}</td><td>{pn35:,}</td><td>{pn50:,}</td><td style='color:#D4AF37;font-weight:bold;'>{sc}</td>"
                 
         elif m_type == "GW":
             p48 = p_dict['48'] + (i * g_dict['48'])
             p64 = p_dict['64'] + (i * g_dict['64'])
+            
+            # [★마진 추가]
+            p48 += margin
+            p64 += margin
+            
             if t>=125: f30,f60a,f60b = f"{p48+5000:,}", f"{p48+6000:,}", f"{p64+6000:,}"
             else: f30,f60a,f60b = "-","-","-"
             cols = f"<td>{p48:,}</td><td>{p64:,}</td><td>{f30}</td><td>{f60a}</td><td>{f60b}</td>"
+            
         elif m_type == "URE":
             pg = p_dict['gen'] + (i * g_dict['gen'])
             pc = p_dict['cert'] + (i * g_dict['cert'])
+            
+            # [★마진 추가]
+            pg += margin
+            pc += margin
+            
             cols = f"<td>{pg:,}</td><td>{pc:,}</td>"
+            
         rows += f"<tr><td>{t}T</td>{cols}</tr>"
 
     head = ""
@@ -248,41 +308,82 @@ style_t = "<style>table{width:100%;border-collapse:collapse;font-size:13px;text-
 # ==========================================
 tab_eps, tab_gw, tab_ure = st.tabs(["🟦 EPS 단가표", "🟨 그라스울 단가표", "🟥 우레탄 단가표"])
 
+# 기본 딕셔너리
+p_eps_base = {
+    'gen_35': base_eps_gen_35,
+    'nan_50': base_eps_nan_50,
+    'cert_50': base_eps_cert_50
+}
+
 with tab_eps:
-    if is_admin: st.info(f"관리자: EPS 일반 50T {base_eps_gen:,}원 기준")
+    if is_admin: st.info(f"관리자: 마진 {margin_per_unit:,}원 적용 중")
     h = style_t
-    # 0.35T 표시
-    h += make_html_table("1. EPS 벽체", {'gen':base_eps_gen, 'nan':base_eps_nan, 'cert':base_eps_cert}, thicks_eps, gaps_eps, no_35t=False)
-    h += make_html_table("2. EPS 외벽체", {'gen':base_eps_gen+d_eps['외벽체'], 'nan':base_eps_nan+d_eps['외벽체'], 'cert':base_eps_cert+d_eps['외벽체']}, thicks_eps, gaps_eps, no_35t=False)
-    h += make_html_table("3. EPS 지붕", {'gen':base_eps_gen+d_eps['지붕'], 'nan':base_eps_nan+d_eps['지붕'], 'cert':base_eps_cert+d_eps['지붕']}, thicks_eps, gaps_eps, no_35t=False)
     
-    # 0.35T 삭제
-    h += make_html_table("4. EPS 징크", {'gen':base_eps_gen+d_eps['징크'], 'nan':base_eps_nan+d_eps['징크'], 'cert':base_eps_cert+d_eps['징크']}, thicks_eps, gaps_eps, no_35t=True)
-    h += make_html_table("5. EPS 라인메탈", {'gen':base_eps_gen+d_eps['라인메탈'], 'nan':base_eps_nan+d_eps['라인메탈'], 'cert':base_eps_cert+d_eps['라인메탈']}, [100,125,150,175,200,225,250], gaps_eps, no_35t=True)
-    h += make_html_table("6. EPS 정메탈", {'gen':base_eps_gen+d_eps['정메탈'], 'nan':base_eps_nan+d_eps['정메탈'], 'cert':base_eps_cert+d_eps['정메탈']}, [100,125,150,175,200,225,250], gaps_eps, no_35t=True)
+    # 1. EPS 벽체
+    h += make_html_table("1. EPS 벽체", p_eps_base, thicks_eps, gaps_eps, no_35t=False, margin=margin_per_unit)
+    
+    # 2. EPS 외벽체
+    p_eps_ext = {
+        'gen_35': base_eps_gen_35 + d_eps['외벽체'],
+        'nan_50': base_eps_nan_50 + d_eps['외벽체'],
+        'cert_50': base_eps_cert_50 + d_eps['외벽체']
+    }
+    h += make_html_table("2. EPS 외벽체", p_eps_ext, thicks_eps, gaps_eps, no_35t=False, margin=margin_per_unit)
+    
+    # 3. EPS 지붕
+    p_eps_roof = {
+        'gen_35': base_eps_gen_35 + d_eps['지붕'],
+        'nan_50': base_eps_nan_50 + d_eps['지붕'],
+        'cert_50': base_eps_cert_50 + d_eps['지붕']
+    }
+    h += make_html_table("3. EPS 지붕", p_eps_roof, thicks_eps, gaps_eps, no_35t=False, margin=margin_per_unit)
+    
+    # 4. EPS 징크 (0.35T 제외)
+    p_eps_zinc = {
+        'gen_35': base_eps_gen_35 + d_eps['징크'],
+        'nan_50': base_eps_nan_50 + d_eps['징크'],
+        'cert_50': base_eps_cert_50 + d_eps['징크']
+    }
+    h += make_html_table("4. EPS 징크", p_eps_zinc, thicks_eps, gaps_eps, no_35t=True, margin=margin_per_unit)
+    
+    # 5. EPS 라인메탈 (0.35T 제외)
+    p_eps_line = {
+        'gen_35': base_eps_gen_35 + d_eps['라인메탈'],
+        'nan_50': base_eps_nan_50 + d_eps['라인메탈'],
+        'cert_50': base_eps_cert_50 + d_eps['라인메탈']
+    }
+    h += make_html_table("5. EPS 라인메탈", p_eps_line, [100,125,150,175,200,225,250], gaps_eps, no_35t=True, margin=margin_per_unit)
+    
+    # 6. EPS 정메탈 (0.35T 제외)
+    p_eps_jung = {
+        'gen_35': base_eps_gen_35 + d_eps['정메탈'],
+        'nan_50': base_eps_nan_50 + d_eps['정메탈'],
+        'cert_50': base_eps_cert_50 + d_eps['정메탈']
+    }
+    h += make_html_table("6. EPS 정메탈", p_eps_jung, [100,125,150,175,200,225,250], gaps_eps, no_35t=True, margin=margin_per_unit)
     
     components.html(h, height=2000, scrolling=True)
 
 with tab_gw:
-    if is_admin: st.info(f"관리자: GW 벽체 50T {base_gw_wall:,}원 기준")
+    if is_admin: st.info(f"관리자: 마진 {margin_per_unit:,}원 적용 중")
     h = style_t
-    h += make_html_table("1. GW 벽체", {'48':bgw, '64':bgw+2000}, thicks_gw, gaps_gw, "GW")
-    h += make_html_table("2. GW 외벽체", {'48':bgw+d_gw['외벽체'], '64':bgw+d_gw['외벽체']+2000}, thicks_gw, gaps_gw, "GW")
-    h += make_html_table("3. GW 지붕", {'48':bgw+d_gw['지붕'], '64':bgw+d_gw['지붕']+2000}, thicks_gw, gaps_gw, "GW")
-    h += make_html_table("4. GW 징크", {'48':bgw+d_gw['징크'], '64':bgw+d_gw['징크']+2000}, thicks_gw, gaps_gw, "GW")
-    h += make_html_table("5. GW 라인메탈", {'48':bgw+d_gw['라인메탈'], '64':bgw+d_gw['라인메탈']+2000}, thicks_gw, gaps_gw, "GW")
-    h += make_html_table("6. GW 정메탈", {'48':bgw+d_gw['정메탈'], '64':bgw+d_gw['정메탈']+2000}, thicks_gw, gaps_gw, "GW")
+    h += make_html_table("1. GW 벽체", {'48':bgw, '64':bgw+2000}, thicks_gw, gaps_gw, "GW", margin=margin_per_unit)
+    h += make_html_table("2. GW 외벽체", {'48':bgw+d_gw['외벽체'], '64':bgw+d_gw['외벽체']+2000}, thicks_gw, gaps_gw, "GW", margin=margin_per_unit)
+    h += make_html_table("3. GW 지붕", {'48':bgw+d_gw['지붕'], '64':bgw+d_gw['지붕']+2000}, thicks_gw, gaps_gw, "GW", margin=margin_per_unit)
+    h += make_html_table("4. GW 징크", {'48':bgw+d_gw['징크'], '64':bgw+d_gw['징크']+2000}, thicks_gw, gaps_gw, "GW", margin=margin_per_unit)
+    h += make_html_table("5. GW 라인메탈", {'48':bgw+d_gw['라인메탈'], '64':bgw+d_gw['라인메탈']+2000}, thicks_gw, gaps_gw, "GW", margin=margin_per_unit)
+    h += make_html_table("6. GW 정메탈", {'48':bgw+d_gw['정메탈'], '64':bgw+d_gw['정메탈']+2000}, thicks_gw, gaps_gw, "GW", margin=margin_per_unit)
     components.html(h, height=2000, scrolling=True)
 
 with tab_ure:
-    if is_admin: st.info(f"관리자: URE 벽체 50T {base_ure_wall:,}원 기준")
+    if is_admin: st.info(f"관리자: 마진 {margin_per_unit:,}원 적용 중")
     h = style_t
-    h += make_html_table("1. 우레탄 벽체", {'gen':bur, 'cert':bur+8000}, thicks_ur, gaps_ure, "URE")
-    h += make_html_table("2. 우레탄 외벽체", {'gen':bur+d_ur['외벽체'], 'cert':bur+d_ur['외벽체']+8000}, thicks_ur, gaps_ure, "URE")
-    h += make_html_table("3. 우레탄 지붕", {'gen':bur+d_ur['지붕'], 'cert':bur+d_ur['지붕']+8000}, thicks_ur, gaps_ure, "URE")
-    h += make_html_table("4. 우레탄 징크", {'gen':bur+d_ur['징크'], 'cert':bur+d_ur['징크']+8000}, thicks_ur, gaps_ure, "URE")
-    h += make_html_table("5. 우레탄 라인메탈", {'gen':bur+d_ur['라인메탈'], 'cert':bur+d_ur['라인메탈']+8000}, thicks_ur, gaps_ure, "URE")
-    h += make_html_table("6. 우레탄 정메탈", {'gen':bur+d_ur['정메탈'], 'cert':bur+d_ur['정메탈']+8000}, thicks_ur, gaps_ure, "URE")
+    h += make_html_table("1. 우레탄 벽체", {'gen':bur, 'cert':bur+8000}, thicks_ur, gaps_ure, "URE", margin=margin_per_unit)
+    h += make_html_table("2. 우레탄 외벽체", {'gen':bur+d_ur['외벽체'], 'cert':bur+d_ur['외벽체']+8000}, thicks_ur, gaps_ure, "URE", margin=margin_per_unit)
+    h += make_html_table("3. 우레탄 지붕", {'gen':bur+d_ur['지붕'], 'cert':bur+d_ur['지붕']+8000}, thicks_ur, gaps_ure, "URE", margin=margin_per_unit)
+    h += make_html_table("4. 우레탄 징크", {'gen':bur+d_ur['징크'], 'cert':bur+d_ur['징크']+8000}, thicks_ur, gaps_ure, "URE", margin=margin_per_unit)
+    h += make_html_table("5. 우레탄 라인메탈", {'gen':bur+d_ur['라인메탈'], 'cert':bur+d_ur['라인메탈']+8000}, thicks_ur, gaps_ure, "URE", margin=margin_per_unit)
+    h += make_html_table("6. 우레탄 정메탈", {'gen':bur+d_ur['정메탈'], 'cert':bur+d_ur['정메탈']+8000}, thicks_ur, gaps_ure, "URE", margin=margin_per_unit)
     components.html(h, height=2000, scrolling=True)
 
 # ==========================================
